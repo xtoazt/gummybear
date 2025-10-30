@@ -86,6 +86,21 @@ class Database {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
+        -- Pending AI changes table (requires king approval)
+        CREATE TABLE IF NOT EXISTS pending_ai_changes (
+            id SERIAL PRIMARY KEY,
+            change_type VARCHAR(50) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            action_data JSONB NOT NULL,
+            requested_by INTEGER REFERENCES users(id),
+            status VARCHAR(20) DEFAULT 'pending',
+            approved_by INTEGER REFERENCES users(id),
+            reviewed_at TIMESTAMP,
+            executed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
         -- Insert default king user (xtoazt gets king role)
         INSERT INTO users (username, password_hash, role, status) 
         VALUES ('xtoazt', $1, 'king', 'approved')

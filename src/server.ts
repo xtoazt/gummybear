@@ -8,7 +8,9 @@ import path from 'path';
 import Database from './lib/database';
 import { UserModel } from './lib/models/User';
 import { MessageModel } from './lib/models/Message';
-// import { RequestModel } from './lib/models/Request';
+// RequestModel is used inside AIController
+import { AIController } from './lib/ai/AIController';
+import { PendingChangeModel } from './lib/models/PendingChange';
 import jwt from 'jsonwebtoken';
 
 dotenv.config();
@@ -33,7 +35,9 @@ app.use(express.static(path.join(__dirname, '../dist')));
 const db = new Database();
 const userModel = new UserModel(db);
 const messageModel = new MessageModel(db);
-// const requestModel = new RequestModel(db);
+const pendingChangeModel = new PendingChangeModel(db);
+// requestModel is created inside AIController
+const aiController = new AIController(db);
 
 // Store active users
 const activeUsers = new Map<string, { socketId: string; user: any; lastSeen: Date }>();
@@ -104,6 +108,14 @@ io.on('connection', (socket) => {
 
         socket.emit('username-accepted', authenticatedUser.username);
         socket.emit('token', token);
+        socket.emit('user-data', {
+          id: authenticatedUser.id,
+          username: authenticatedUser.username,
+          role: authenticatedUser.role,
+          status: authenticatedUser.status,
+          created_at: authenticatedUser.created_at,
+          last_seen: authenticatedUser.last_seen || new Date().toISOString()
+        });
       } else {
         // Check if user exists but password is wrong
         // const existingUser = await userModel.findById(0); // This is a hack, we need a better way
@@ -206,6 +218,114 @@ io.on('connection', (socket) => {
     socket.emit('online-users', onlineUsers);
   });
 
+  // AI Control Handlers (only for support/king/admin roles)
+  if (user.role === 'support' || user.role === 'king' || user.role === 'admin') {
+    // AI can get full context
+    socket.on('ai-get-context', async () => {
+      try {
+        const context = await aiController.getFullContext();
+        socket.emit('ai-context', context);
+      } catch (error) {
+        console.error('AI context error:', error);
+        socket.emit('ai-error', 'Failed to get context');
+      }
+    });
+
+    // AI can execute actions
+    socket.on('ai-action', async (data: { action: string; params: any }) => {
+      try {
+        const isKing = user.role === 'king';
+        const result = await aiController.executeAction(data.action, data.params, user.id, isKing);
+        
+        // Broadcast result
+        socket.emit('ai-action-result', {
+          action: data.action,
+          success: true,
+          result
+        });
+
+        // If change is pending, notify king
+        if (result.pending && isKing === false) {
+          // Notify all king users
+          activeUsers.forEach((userData, username) => {
+            if (userData.user.role === 'king') {
+              const kingSocket = io.sockets.sockets.get(userSockets.get(username)!);
+              if (kingSocket) {
+                kingSocket.emit('pending-change-created', result);
+              }
+            }
+          });
+        }
+
+        // If action was to send a message, broadcast it
+        if (data.action === 'send_message') {
+          io.to('global').emit('chat-message', {
+            username: 'GummyBear AI',
+            message: data.params.content,
+            timestamp: new Date().toISOString(),
+            role: 'support'
+          });
+        }
+      } catch (error: any) {
+        console.error('AI action error:', error);
+        socket.emit('ai-action-result', {
+          action: data.action,
+          success: false,
+          error: error.message
+        });
+      }
+    });
+
+    // AI can get capabilities
+    socket.on('ai-capabilities', () => {
+      socket.emit('ai-capabilities', aiController.getCapabilities());
+    });
+  }
+
+  // King-only handlers
+  if (user.role === 'king') {
+    // Get pending changes
+    socket.on('get-pending-changes', async () => {
+      try {
+        const changes = await pendingChangeModel.getAllPending();
+        socket.emit('pending-changes', changes);
+      } catch (error) {
+        console.error('Get pending changes error:', error);
+        socket.emit('error', 'Failed to get pending changes');
+      }
+    });
+
+    // Approve pending change
+    socket.on('approve-change', async (data: { changeId: number }) => {
+      try {
+        await pendingChangeModel.approve(data.changeId, user.id);
+        await aiController.executeApprovedChange(data.changeId);
+        
+        socket.emit('change-approved', { changeId: data.changeId });
+        
+        // Notify all clients about updated pending changes
+        io.emit('pending-changes-updated');
+      } catch (error) {
+        console.error('Approve change error:', error);
+        socket.emit('error', 'Failed to approve change');
+      }
+    });
+
+    // Reject pending change
+    socket.on('reject-change', async (data: { changeId: number }) => {
+      try {
+        await pendingChangeModel.reject(data.changeId, user.id);
+        socket.emit('change-rejected', { changeId: data.changeId });
+        
+        // Notify all clients about updated pending changes
+        io.emit('pending-changes-updated');
+      } catch (error) {
+        console.error('Reject change error:', error);
+        socket.emit('error', 'Failed to reject change');
+      }
+    });
+  }
+
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`User ${user.username} disconnected`);
@@ -230,9 +350,136 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve the main app
+// AI Control API Endpoints
+app.post('/api/ai/action', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await userModel.findById(decoded.userId);
+
+    if (!user || !['support', 'king', 'admin'].includes(user.role)) {
+      return res.status(403).json({ error: 'AI access restricted' });
+    }
+
+    const { action, params } = req.body;
+    const isKing = user.role === 'king';
+    const result = await aiController.executeAction(action, params, user.id, isKing);
+
+    res.json({ success: true, result });
+  } catch (error: any) {
+    console.error('AI API error:', error);
+    res.status(500).json({ error: 'Failed to execute AI action' });
+  }
+});
+
+app.get('/api/ai/context', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await userModel.findById(decoded.userId);
+
+    if (!user || !['support', 'king', 'admin'].includes(user.role)) {
+      return res.status(403).json({ error: 'AI access restricted' });
+    }
+
+    const context = await aiController.getFullContext();
+    res.json(context);
+  } catch (error: any) {
+    console.error('AI context error:', error);
+    res.status(500).json({ error: 'Failed to get context' });
+  }
+});
+
+app.get('/api/ai/capabilities', (_req, res) => {
+  res.json(aiController.getCapabilities());
+});
+
+// King-only API endpoints for pending changes
+app.get('/api/pending-changes', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await userModel.findById(decoded.userId);
+
+    if (!user || user.role !== 'king') {
+      return res.status(403).json({ error: 'King access only' });
+    }
+
+    const changes = await pendingChangeModel.getAllPending();
+    res.json(changes);
+  } catch (error: any) {
+    console.error('Get pending changes error:', error);
+    res.status(500).json({ error: 'Failed to get pending changes' });
+  }
+});
+
+app.post('/api/pending-changes/:id/approve', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await userModel.findById(decoded.userId);
+
+    if (!user || user.role !== 'king') {
+      return res.status(403).json({ error: 'King access only' });
+    }
+
+    const changeId = parseInt(req.params.id);
+    await pendingChangeModel.approve(changeId, user.id);
+    await aiController.executeApprovedChange(changeId);
+
+    res.json({ success: true, message: 'Change approved and executed' });
+  } catch (error: any) {
+    console.error('Approve change error:', error);
+    res.status(500).json({ error: 'Failed to approve change' });
+  }
+});
+
+app.post('/api/pending-changes/:id/reject', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await userModel.findById(decoded.userId);
+
+    if (!user || user.role !== 'king') {
+      return res.status(403).json({ error: 'King access only' });
+    }
+
+    const changeId = parseInt(req.params.id);
+    await pendingChangeModel.reject(changeId, user.id);
+
+    res.json({ success: true, message: 'Change rejected' });
+  } catch (error: any) {
+    console.error('Reject change error:', error);
+    res.status(500).json({ error: 'Failed to reject change' });
+  }
+});
+
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../client')));
+
+// Serve the main app (React)
 app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  res.sendFile(path.join(__dirname, '../client/index.html'));
 });
 
 // Initialize database and start server

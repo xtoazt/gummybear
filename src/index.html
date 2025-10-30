@@ -435,6 +435,182 @@
             color: #666;
             text-align: center;
         }
+
+        /* King Dashboard Panel */
+        .king-panel {
+            position: fixed;
+            top: 0;
+            right: -500px;
+            width: 500px;
+            height: 100vh;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            transition: right 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .king-panel.open {
+            right: 0;
+        }
+
+        .king-panel-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #333;
+            background: #0f0f0f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .king-panel-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #ff6b6b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .close-panel-btn {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-panel-btn:hover {
+            color: #e0e0e0;
+        }
+
+        .king-panel-content {
+            padding: 1.5rem;
+        }
+
+        .pending-change-item {
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .pending-change-item:hover {
+            border-color: #ff6b6b;
+            transform: translateY(-2px);
+        }
+
+        .change-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .change-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 0.25rem;
+        }
+
+        .change-type {
+            background: #ff6b6b;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .change-description {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .change-details {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #a0a0a0;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .change-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .approve-change-btn {
+            flex: 1;
+            background: #4caf50;
+            border: none;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .approve-change-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .reject-change-btn {
+            flex: 1;
+            background: #f44336;
+            border: none;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .reject-change-btn:hover {
+            background: #da190b;
+            transform: translateY(-1px);
+        }
+
+        .pending-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff6b6b;
+            color: white;
+            border-radius: 50%;
+            min-width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #1a1a1a;
+        }
+
+        .no-pending {
+            text-align: center;
+            color: #666;
+            padding: 3rem 1rem;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -485,6 +661,11 @@
                 <div class="icon">⚙️</div>
                 <div class="tooltip">Settings</div>
             </div>
+            <div class="sidebar-item king-only hidden" id="codeButton" data-action="code">
+                <div class="icon">💻</div>
+                <div class="tooltip">Code Review</div>
+                <span class="pending-badge hidden" id="pendingBadge">0</span>
+            </div>
             
             <div class="online-count">
                 <span id="onlineCount">0 online</span>
@@ -527,6 +708,22 @@
                         ></textarea>
                         <button type="submit" class="send-btn" id="sendBtn">Send</button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- King Dashboard Panel -->
+        <div class="king-panel hidden" id="kingPanel">
+            <div class="king-panel-header">
+                <div class="king-panel-title">
+                    <span>💻</span>
+                    <span>Code Review</span>
+                </div>
+                <button class="close-panel-btn" onclick="toggleKingPanel()">&times;</button>
+            </div>
+            <div class="king-panel-content">
+                <div id="pendingChangesList">
+                    <div class="no-pending">Loading pending changes...</div>
                 </div>
             </div>
         </div>
@@ -577,8 +774,18 @@
         });
 
         socket.on('username-accepted', (username) => {
+            // We need to get the full user object from the server
+            // For now, we'll get it from the token
             currentUser = { username };
             showApp();
+        });
+
+        socket.on('user-data', (userData) => {
+            currentUser = userData;
+            if (userData.role === 'king') {
+                showKingFeatures();
+                loadPendingChanges();
+            }
         });
 
         socket.on('username-error', (error) => {
@@ -595,6 +802,23 @@
 
         socket.on('online-users', (users) => {
             updateOnlineCount(users.length);
+        });
+
+        // King dashboard handlers
+        socket.on('pending-changes', (changes) => {
+            displayPendingChanges(changes);
+        });
+
+        socket.on('pending-change-created', (result) => {
+            if (currentUser?.role === 'king') {
+                loadPendingChanges();
+            }
+        });
+
+        socket.on('pending-changes-updated', () => {
+            if (currentUser?.role === 'king') {
+                loadPendingChanges();
+            }
         });
 
         // Login form handler
@@ -642,9 +866,117 @@
 
         function showApp() {
             loginContainer.classList.add('hidden');
-            appContainer.classList.remove('hidden');
+            appContainer.classList.remove('hiddenρα');
             messageInput.focus();
+            
+            // Check if user is king - check username or wait for user-data
+            setTimeout(() => {
+                if (currentUser?.username === 'xtoazt') {
+                    showKingFeatures();
+                    loadPendingChanges();
+                }
+            }, 500);
         }
+
+        function showKingFeatures()ближайшие {
+            const codeButton = document.getElementById('codeButton');
+            const kingPanel = document.getElementById('kingPanel');
+            if (codeButton) {
+                codeButton.classList.remove('hidden');
+                codeButton.addEventListener('click', () => {
+                    if (kingPanel) {
+                        kingPanel.classList.remove('hidden');
+                        toggleKingPanel();
+                    }
+                });
+            }
+            if (kingPanel) {
+                kingPanel.classList.remove('hidden');
+            }
+        }
+
+        function toggleKingPanel() {
+            const panel = document.getElementById('kingPanel');
+            if (panel) {
+                panel.classList.toggle('open');
+                if (panel.classList.contains('open')) {
+                    loadPendingChanges();
+                }
+            }
+        }
+
+        function loadPendingChanges() {
+            socket.emit('get-pending-changes');
+        }
+
+        function displayPendingChanges(changes) {
+            const list = document.getElementById('pendingChangesList');
+            const badge = document.getElementById('pendingBadge');
+            
+            if (!list) return;
+
+            if (changes.length === 0) {
+                list.innerHTML = '<div class="no-pending">No pending changes. All clear! 👑</div>';
+                if (badge) {
+                    badge.classList.add('hidden');
+                }
+                return;
+            }
+
+            if (badge) {
+                badge.textContent = changes.length > 99 ? '99+' : changes.length.toString();
+                badge.classList.remove('hidden');
+            }
+
+            list.innerHTML = changes.map(change => {
+                const actionData = change.action_data || {};
+                const params = actionData.params || {};
+                
+                let detailsContent = '';
+                if (change.change_type === 'modify_code') {
+                    detailsContent = `File: ${params.filePath}\n\n${params.content?.substring(0, 500) || 'No content'}...`;
+                } else {
+                    detailsContent = JSON.stringify(actionData, null, 2);
+                }
+
+                return `
+                    <div class="pending-change-item">
+                        <div class="change-header">
+                            <div>
+                                <div class="change-title">${escapeHtml(change.title)}</div>
+                                <div class sean="change-description">${escapeHtml(change.description || '')}</div>
+                            </div>
+                            <span class="change-type">${change.change_type}</span>
+                        </div>
+                        <div class="change-details">${escapeHtml(detailsContent)}</div>
+                        <div class="change-actions">
+                            <button class="approve-change-btn" onclick="approveChange(${change.id})">
+                                ✓ Approve
+                            </button>
+                            <button class="reject-change-btn" onclick="rejectChange(${change.id})">
+                                ✗ Reject
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function approveChange(changeId) {
+            if (confirm('Approve and execute this change?')) {
+                socket.emit('approve-change', { changeId });
+            }
+        }
+
+        function rejectChange(changeId) {
+            if (confirm('Reject this change?')) {
+                socket.emit('reject-change', { changeId });
+            }
+        }
+
+        window.toggleKingPanel = toggleKingPanel;
+        window.approveChange = approveChange;
+        window.rejectChange = rejectChange;
 
         function showError(message) {
             errorMessage.textContent = message;

@@ -21,6 +21,11 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "@database_url"
+    "DATABASE_URL": "@database_url",
+    "GITHUB_TOKEN": "@github_token",
+    "GITHUB_OWNER": "@github_owner",
+    "GITHUB_REPO": "@github_repo",
+    "GITHUB_BRANCH": "@github_branch",
+    "JWT_SECRET": "@jwt_secret"
   }
 }

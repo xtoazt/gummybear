@@ -8,7 +8,8 @@ import path from 'path';
 import Database from './lib/database';
 import { UserModel } from './lib/models/User';
 import { MessageModel } from './lib/models/Message';
-// import { RequestModel } from './lib/models/Request';
+// RequestModel is used inside AIController
+import { AIController } from './lib/ai/AIController';
 import jwt from 'jsonwebtoken';
 dotenv.config();
 const app = express();
@@ -29,7 +30,8 @@ app.use(express.static(path.join(__dirname, '../dist')));
 const db = new Database();
 const userModel = new UserModel(db);
 const messageModel = new MessageModel(db);
-// const requestModel = new RequestModel(db);
+// requestModel is created inside AIController
+const aiController = new AIController(db);
 // Store active users
 const activeUsers = new Map();
 const userSockets = new Map(); // username -> socketId
@@ -168,6 +170,53 @@ io.on('connection', (socket) => {
         const onlineUsers = Array.from(activeUsers.keys());
         socket.emit('online-users', onlineUsers);
     });
+    // AI Control Handlers (only for support/king/admin roles)
+    if (user.role === 'support' || user.role === 'king' || user.role === 'admin') {
+        // AI can get full context
+        socket.on('ai-get-context', async () => {
+            try {
+                const context = await aiController.getFullContext();
+                socket.emit('ai-context', context);
+            }
+            catch (error) {
+                console.error('AI context error:', error);
+                socket.emit('ai-error', 'Failed to get context');
+            }
+        });
+        // AI can execute actions
+        socket.on('ai-action', async (data) => {
+            try {
+                const result = await aiController.executeAction(data.action, data.params);
+                // Broadcast result
+                socket.emit('ai-action-result', {
+                    action: data.action,
+                    success: true,
+                    result
+                });
+                // If action was to send a message, broadcast it
+                if (data.action === 'send_message') {
+                    io.to('global').emit('chat-message', {
+                        username: 'GummyBear AI',
+                        message: data.params.content,
+                        timestamp: new Date().toISOString(),
+                        role: 'support'
+                    });
+                }
+            }
+            catch (error) {
+                console.error('AI action error:', error);
+                socket.emit('ai-action-result', {
+                    action: data.action,
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+        // AI can get capabilities
+        socket.on('ai-capabilities', () => {
+            socket.emit('ai-capabilities', aiController.getCapabilities());
+        });
+    }
     // Handle disconnection
     socket.on('disconnect', () => {
         console.log(`User ${user.username} disconnected`);
@@ -186,6 +235,49 @@ function broadcastOnlineUsers() {
 // API Routes
 app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+// AI Control API Endpoints
+app.post('/api/ai/action', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await userModel.findById(decoded.userId);
+        if (!user || !['support', 'king', 'admin'].includes(user.role)) {
+            return res.status(403).json({ error: 'AI access restricted' });
+        }
+        const { action, params } = req.body;
+        const result = await aiController.executeAction(action, params);
+        res.json({ success: true, result });
+    }
+    catch (error) {
+        console.error('AI API error:', error);
+        res.status(500).json({ error: 'Failed to execute AI action' });
+    }
+});
+app.get('/api/ai/context', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await userModel.findById(decoded.userId);
+        if (!user || !['support', 'king', 'admin'].includes(user.role)) {
+            return res.status(403).json({ error: 'AI access restricted' });
+        }
+        const context = await aiController.getFullContext();
+        res.json(context);
+    }
+    catch (error) {
+        console.error('AI context error:', error);
+        res.status(500).json({ error: 'Failed to get context' });
+    }
+});
+app.get('/api/ai/capabilities', (_req, res) => {
+    res.json(aiController.getCapabilities());
 });
 // Serve the main app
 app.get('*', (_req, res) => {

@@ -4,24 +4,13 @@
   "description": "AI-Powered P2P Chat Platform",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && vite build",
-    "dev": "vite",
-    "preview": "vite preview",
+    "build": "node scripts/build.js",
+    "dev": "tsc --watch",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "vite": "^5.0.0",
-    "vite-plugin-html": "^3.2.0"
+    "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "@radix-ui/react-icons": "^1.3.0",
-    "@radix-ui/react-slot": "^1.0.2",
-    "@radix-ui/react-toast": "^1.1.5",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.0.0",
-    "lucide-react": "^0.300.0",
-    "tailwind-merge": "^2.0.0"
-  }
+  "dependencies": {}
 }

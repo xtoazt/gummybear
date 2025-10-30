@@ -1,14 +1,13 @@
-import { api, APIError } from './utils/api';
-import { hasPermission, canType, canApproveRequests, canCreateComponents, getRoleDisplayName, getRoleColor } from './utils/roleUtils';
+import { api } from './utils/api';
+import { canType, canApproveRequests, getRoleDisplayName, getRoleColor } from './utils/roleUtils';
 import { CHANNELS, formatTime, escapeHtml, formatMessageContent, getInitials } from './utils/chatUtils';
-import type { User, Message, AccessRequest, Channel, AIResponse } from './types';
+import type { User, Message, AccessRequest, Channel } from './types';
 
 class GummyBearApp {
   private currentUser: User | null = null;
   private currentChannel: Channel = 'global';
   private messages: Message[] = [];
   private requests: AccessRequest[] = [];
-  private isConnected = false;
   private messageInterval: number | null = null;
   private requestInterval: number | null = null;
 
@@ -267,7 +266,7 @@ class GummyBearApp {
     }).join('');
   }
 
-  private async handleRequest(requestId: number, action: 'approve' | 'reject'): Promise<void> {
+  public async handleRequest(requestId: number, action: 'approve' | 'reject'): Promise<void> {
     try {
       await api.handleRequest(requestId, action);
       await this.loadRequests();
@@ -383,7 +382,7 @@ class GummyBearApp {
     alert('Settings panel coming soon!');
   }
 
-  private toggleAdminPanel(): void {
+  public toggleAdminPanel(): void {
     const panel = document.getElementById('adminPanel');
     if (panel) {
       panel.classList.toggle('open');
@@ -421,7 +420,6 @@ let app: GummyBearApp;
 
 document.addEventListener('DOMContentLoaded', () => {
   app = new GummyBearApp();
+  // Make app globally available for onclick handlers
+  (window as any).app = app;
 });
-
-// Make app globally available for onclick handlers
-(window as any).app = app;

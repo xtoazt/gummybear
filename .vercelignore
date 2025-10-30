@@ -1,0 +1,12 @@
+node_modules
+src
+scripts
+tsconfig.json
+package.json
+package-lock.json
+.git
+.gitignore
+README.md
+demo.html
+test_db.php
+test_db.py

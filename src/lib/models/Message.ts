@@ -53,7 +53,7 @@ export class MessageModel {
         [channel, limit]
       );
 
-      return result.rows.reverse().map(row => ({
+      return result.rows.reverse().map((row: any) => ({
         id: row.id,
         sender_id: row.sender_id,
         recipient_id: row.recipient_id,
@@ -84,7 +84,7 @@ export class MessageModel {
         [user1Id, user2Id, limit]
       );
 
-      return result.rows.reverse().map(row => ({
+      return result.rows.reverse().map((row: any) => ({
         id: row.id,
         sender_id: row.sender_id,
         recipient_id: row.recipient_id,

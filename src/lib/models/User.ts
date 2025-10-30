@@ -99,7 +99,7 @@ export class UserModel {
         'SELECT id, username, role, status, created_at, last_seen FROM users ORDER BY created_at DESC'
       );
       
-      return result.rows.map(user => ({
+      return result.rows.map((user: any) => ({
         id: user.id,
         username: user.username,
         role: user.role,

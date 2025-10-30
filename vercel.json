@@ -1,13 +1,26 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "src/server.ts",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "src": "/chat/socket.io/(.*)",
+      "dest": "/src/server.ts"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/src/server.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "/demo.html"
+      "dest": "/src/server.ts"
     }
-  ]
+  ],
+  "env": {
+    "DATABASE_URL": "@database_url"
+  }
 }

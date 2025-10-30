@@ -1,9 +1,5 @@
 node_modules
-src
 scripts
-tsconfig.json
-package.json
-package-lock.json
 .git
 .gitignore
 README.md
@@ -12,3 +8,5 @@ test_db.py
 api/*.php
 lib
 setup.php
+demo.html
+index.html

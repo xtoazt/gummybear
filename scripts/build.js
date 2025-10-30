@@ -51,7 +51,7 @@ if (fs.existsSync(staticDir)) {
 // Copy HTML files
 console.log('📄 Copying HTML files...');
 const srcDir = path.join(__dirname, '..', 'src');
-const htmlFiles = ['index.html', 'app.html', 'landing.html'];
+const htmlFiles = ['index.html'];
 
 htmlFiles.forEach(file => {
   const srcPath = path.join(srcDir, file);
@@ -64,4 +64,4 @@ htmlFiles.forEach(file => {
 });
 
 console.log('✅ Build complete!');
-console.log('🚀 You can now deploy to Vercel or run: php -S localhost:8000');
+console.log('🚀 You can now deploy to Vercel or run: npm start');

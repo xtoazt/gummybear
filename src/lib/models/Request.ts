@@ -41,7 +41,7 @@ export class RequestModel {
          ORDER BY r.created_at ASC`
       );
 
-      return result.rows.map(row => ({
+      return result.rows.map((row: any) => ({
         id: row.id,
         user_id: row.user_id,
         message: row.message,

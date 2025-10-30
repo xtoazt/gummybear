@@ -12,6 +12,12 @@ import { MessageModel } from './lib/models/Message';
 import { AIController } from './lib/ai/AIController';
 import { PendingChangeModel } from './lib/models/PendingChange';
 import jwt from 'jsonwebtoken';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 

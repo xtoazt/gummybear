@@ -2,6 +2,7 @@
   "name": "gummybear-chat",
   "version": "1.0.0",
   "description": "AI-Powered P2P Chat Platform",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && vite build",

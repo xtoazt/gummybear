@@ -1,0 +1,20 @@
+{
+    "name": "gummybear/p2p-chat",
+    "description": "AI-Powered P2P Chat Platform with WebLLM Integration",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "GummyBear\\": "lib/"
+        }
+    },
+    "scripts": {
+        "setup": "php setup.php",
+        "serve": "php -S localhost:8000"
+    }
+}

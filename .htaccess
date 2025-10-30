@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Handle API routes
+RewriteRule ^api/(.*)$ api/$1 [L]
+
+# Handle static files
+RewriteRule ^static/(.*)$ static/$1 [L]
+
+# Handle root requests
+RewriteRule ^$ index.php [L]
+
+# Handle other requests
+RewriteRule ^(.*)$ index.php [L]

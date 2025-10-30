@@ -5,12 +5,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
-import Database from './lib/database';
-import { UserModel } from './lib/models/User';
-import { MessageModel } from './lib/models/Message';
+import Database from './lib/database.js';
+import { UserModel } from './lib/models/User.js';
+import { MessageModel } from './lib/models/Message.js';
 // RequestModel is used inside AIController
-import { AIController } from './lib/ai/AIController';
-import { PendingChangeModel } from './lib/models/PendingChange';
+import { AIController } from './lib/ai/AIController.js';
+import { PendingChangeModel } from './lib/models/PendingChange.js';
 import jwt from 'jsonwebtoken';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';

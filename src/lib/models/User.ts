@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import Database from '../database';
+import Database from '../database.js';
 
 export interface User {
   id: number;

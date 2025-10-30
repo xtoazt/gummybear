@@ -1,23 +1,24 @@
 {
   "version": 2,
+  "buildCommand": "tsc --project tsconfig.server.json",
   "builds": [
     {
-      "src": "src/server.ts",
+      "src": "dist/server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/chat/socket.io/(.*)",
-      "dest": "/src/server.ts"
+      "dest": "/dist/server.js"
     },
     {
       "src": "/api/(.*)",
-      "dest": "/src/server.ts"
+      "dest": "/dist/server.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/src/server.ts"
+      "dest": "/dist/server.js"
     }
   ]
 }

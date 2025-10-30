@@ -5,12 +5,18 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
-import Database from './lib/database';
-import { UserModel } from './lib/models/User';
-import { MessageModel } from './lib/models/Message';
+import Database from './lib/database.js';
+import { UserModel } from './lib/models/User.js';
+import { MessageModel } from './lib/models/Message.js';
 // RequestModel is used inside AIController
-import { AIController } from './lib/ai/AIController';
+import { AIController } from './lib/ai/AIController.js';
+import { PendingChangeModel } from './lib/models/PendingChange.js';
 import jwt from 'jsonwebtoken';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 dotenv.config();
 const app = express();
 const server = createServer(app);
@@ -30,6 +36,7 @@ app.use(express.static(path.join(__dirname, '../dist')));
 const db = new Database();
 const userModel = new UserModel(db);
 const messageModel = new MessageModel(db);
+const pendingChangeModel = new PendingChangeModel(db);
 // requestModel is created inside AIController
 const aiController = new AIController(db);
 // Store active users
@@ -84,6 +91,14 @@ io.on('connection', (socket) => {
                 const token = jwt.sign({ userId: authenticatedUser.id, username: authenticatedUser.username }, JWT_SECRET, { expiresIn: '24h' });
                 socket.emit('username-accepted', authenticatedUser.username);
                 socket.emit('token', token);
+                socket.emit('user-data', {
+                    id: authenticatedUser.id,
+                    username: authenticatedUser.username,
+                    role: authenticatedUser.role,
+                    status: authenticatedUser.status,
+                    created_at: authenticatedUser.created_at,
+                    last_seen: authenticatedUser.last_seen || new Date().toISOString()
+                });
             }
             else {
                 // Check if user exists but password is wrong
@@ -186,13 +201,26 @@ io.on('connection', (socket) => {
         // AI can execute actions
         socket.on('ai-action', async (data) => {
             try {
-                const result = await aiController.executeAction(data.action, data.params);
+                const isKing = user.role === 'king';
+                const result = await aiController.executeAction(data.action, data.params, user.id, isKing);
                 // Broadcast result
                 socket.emit('ai-action-result', {
                     action: data.action,
                     success: true,
                     result
                 });
+                // If change is pending, notify king
+                if (result.pending && isKing === false) {
+                    // Notify all king users
+                    activeUsers.forEach((userData, username) => {
+                        if (userData.user.role === 'king') {
+                            const kingSocket = io.sockets.sockets.get(userSockets.get(username));
+                            if (kingSocket) {
+                                kingSocket.emit('pending-change-created', result);
+                            }
+                        }
+                    });
+                }
                 // If action was to send a message, broadcast it
                 if (data.action === 'send_message') {
                     io.to('global').emit('chat-message', {
@@ -215,6 +243,47 @@ io.on('connection', (socket) => {
         // AI can get capabilities
         socket.on('ai-capabilities', () => {
             socket.emit('ai-capabilities', aiController.getCapabilities());
+        });
+    }
+    // King-only handlers
+    if (user.role === 'king') {
+        // Get pending changes
+        socket.on('get-pending-changes', async () => {
+            try {
+                const changes = await pendingChangeModel.getAllPending();
+                socket.emit('pending-changes', changes);
+            }
+            catch (error) {
+                console.error('Get pending changes error:', error);
+                socket.emit('error', 'Failed to get pending changes');
+            }
+        });
+        // Approve pending change
+        socket.on('approve-change', async (data) => {
+            try {
+                await pendingChangeModel.approve(data.changeId, user.id);
+                await aiController.executeApprovedChange(data.changeId);
+                socket.emit('change-approved', { changeId: data.changeId });
+                // Notify all clients about updated pending changes
+                io.emit('pending-changes-updated');
+            }
+            catch (error) {
+                console.error('Approve change error:', error);
+                socket.emit('error', 'Failed to approve change');
+            }
+        });
+        // Reject pending change
+        socket.on('reject-change', async (data) => {
+            try {
+                await pendingChangeModel.reject(data.changeId, user.id);
+                socket.emit('change-rejected', { changeId: data.changeId });
+                // Notify all clients about updated pending changes
+                io.emit('pending-changes-updated');
+            }
+            catch (error) {
+                console.error('Reject change error:', error);
+                socket.emit('error', 'Failed to reject change');
+            }
         });
     }
     // Handle disconnection
@@ -249,7 +318,8 @@ app.post('/api/ai/action', async (req, res) => {
             return res.status(403).json({ error: 'AI access restricted' });
         }
         const { action, params } = req.body;
-        const result = await aiController.executeAction(action, params);
+        const isKing = user.role === 'king';
+        const result = await aiController.executeAction(action, params, user.id, isKing);
         res.json({ success: true, result });
     }
     catch (error) {
@@ -279,9 +349,72 @@ app.get('/api/ai/context', async (req, res) => {
 app.get('/api/ai/capabilities', (_req, res) => {
     res.json(aiController.getCapabilities());
 });
-// Serve the main app
+// King-only API endpoints for pending changes
+app.get('/api/pending-changes', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await userModel.findById(decoded.userId);
+        if (!user || user.role !== 'king') {
+            return res.status(403).json({ error: 'King access only' });
+        }
+        const changes = await pendingChangeModel.getAllPending();
+        res.json(changes);
+    }
+    catch (error) {
+        console.error('Get pending changes error:', error);
+        res.status(500).json({ error: 'Failed to get pending changes' });
+    }
+});
+app.post('/api/pending-changes/:id/approve', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await userModel.findById(decoded.userId);
+        if (!user || user.role !== 'king') {
+            return res.status(403).json({ error: 'King access only' });
+        }
+        const changeId = parseInt(req.params.id);
+        await pendingChangeModel.approve(changeId, user.id);
+        await aiController.executeApprovedChange(changeId);
+        res.json({ success: true, message: 'Change approved and executed' });
+    }
+    catch (error) {
+        console.error('Approve change error:', error);
+        res.status(500).json({ error: 'Failed to approve change' });
+    }
+});
+app.post('/api/pending-changes/:id/reject', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await userModel.findById(decoded.userId);
+        if (!user || user.role !== 'king') {
+            return res.status(403).json({ error: 'King access only' });
+        }
+        const changeId = parseInt(req.params.id);
+        await pendingChangeModel.reject(changeId, user.id);
+        res.json({ success: true, message: 'Change rejected' });
+    }
+    catch (error) {
+        console.error('Reject change error:', error);
+        res.status(500).json({ error: 'Failed to reject change' });
+    }
+});
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../client')));
+// Serve the main app (React)
 app.get('*', (_req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+    res.sendFile(path.join(__dirname, '../client/index.html'));
 });
 // Initialize database and start server
 async function startServer() {

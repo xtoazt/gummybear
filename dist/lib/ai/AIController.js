@@ -1,6 +1,7 @@
-import { UserModel } from '../models/User';
-import { MessageModel } from '../models/Message';
-import { RequestModel } from '../models/Request';
+import { UserModel } from '../models/User.js';
+import { MessageModel } from '../models/Message.js';
+import { RequestModel } from '../models/Request.js';
+import { PendingChangeModel } from '../models/PendingChange.js';
 import { Octokit } from '@octokit/rest';
 export class AIController {
     constructor(db) {
@@ -28,16 +29,30 @@ export class AIController {
             writable: true,
             value: void 0
         });
+        Object.defineProperty(this, "pendingChangeModel", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
         Object.defineProperty(this, "githubClient", {
             enumerable: true,
             configurable: true,
             writable: true,
             value: null
         });
+        // Actions that don't require approval
+        Object.defineProperty(this, "NO_APPROVAL_NEEDED", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: ['send_message', 'get_context']
+        });
         this.db = db;
         this.userModel = new UserModel(db);
         this.messageModel = new MessageModel(db);
         this.requestModel = new RequestModel(db);
+        this.pendingChangeModel = new PendingChangeModel(db);
         // Initialize GitHub client if token is available
         const githubToken = process.env.GITHUB_TOKEN;
         if (githubToken) {
@@ -210,7 +225,23 @@ export class AIController {
     async approveRequest(requestId, reviewerId = 1) {
         return await this.requestModel.approve(requestId, reviewerId);
     }
-    async executeAction(action, params) {
+    async executeAction(action, params, userId, isKing = false) {
+        // If action doesn't need approval, execute immediately
+        if (this.NO_APPROVAL_NEEDED.includes(action)) {
+            return await this.executeActionDirect(action, params);
+        }
+        // If king, execute immediately
+        if (isKing) {
+            return await this.executeActionDirect(action, params);
+        }
+        // Otherwise, create pending change
+        const changeType = action;
+        const title = this.getActionTitle(action, params);
+        const description = this.getActionDescription(action, params);
+        const pendingId = await this.pendingChangeModel.create(changeType, title, description, { action, params }, userId || 1);
+        return { pending: true, pendingChangeId: pendingId, message: 'Change pending king approval' };
+    }
+    async executeActionDirect(action, params) {
         switch (action) {
             case 'send_message':
                 return await this.sendMessageAsAI(params.channel, params.content, params.userId);
@@ -228,6 +259,50 @@ export class AIController {
                 return await this.getFullContext();
             default:
                 throw new Error(`Unknown action: ${action}`);
+        }
+    }
+    async executeApprovedChange(changeId) {
+        try {
+            const change = await this.pendingChangeModel.getById(changeId);
+            if (!change || change.status !== 'approved') {
+                throw new Error('Change not found or not approved');
+            }
+            const { action, params } = change.action_data;
+            await this.executeActionDirect(action, params);
+            await this.pendingChangeModel.markExecuted(changeId);
+            return true;
+        }
+        catch (error) {
+            console.error('Error executing approved change:', error);
+            return false;
+        }
+    }
+    getActionTitle(action, params) {
+        switch (action) {
+            case 'modify_code':
+                return `Modify ${params.filePath}`;
+            case 'create_component':
+                return `Create component: ${params.name}`;
+            case 'deploy':
+                return 'Deploy changes';
+            case 'modify_user':
+                return `Modify user ${params.userId}`;
+            default:
+                return `AI Action: ${action}`;
+        }
+    }
+    getActionDescription(action, params) {
+        switch (action) {
+            case 'modify_code':
+                return `Commit message: ${params.commitMessage || 'AI requested change'}`;
+            case 'create_component':
+                return `Component for users: ${params.targetUsers?.join(', ') || 'all users'}`;
+            case 'deploy':
+                return 'Deploy latest changes to production';
+            case 'modify_user':
+                return `Change: ${JSON.stringify(params.changes)}`;
+            default:
+                return `Action: ${action}`;
         }
     }
 }

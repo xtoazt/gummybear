@@ -2,9 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// Use process.cwd() for better compatibility with build environments
 const projectRoot = process.cwd();
-const frontendRoot = path.join(projectRoot, 'src/frontend');
-const outputDir = path.join(projectRoot, 'dist/client');
+const frontendRoot = path.join(projectRoot, 'src', 'frontend');
+const outputDir = path.join(projectRoot, 'dist', 'client');
 
 export default defineConfig({
   plugins: [react()],
@@ -32,6 +33,6 @@ export default defineConfig({
       '@': frontendRoot
     }
   },
-  publicDir: false,
+  publicDir: path.resolve(projectRoot, 'public'),
   clearScreen: false
 });

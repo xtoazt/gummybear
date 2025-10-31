@@ -846,7 +846,6 @@ app.use(async (_req, _res, next) => {
   await ensureDbInitialized();
   next();
 });
-app.use(express.static(path.join(__dirname, "../dist")));
 var activePeers = /* @__PURE__ */ new Map();
 setInterval(() => {
   const now = /* @__PURE__ */ new Date();
@@ -1158,12 +1157,12 @@ app.post("/api/pending-changes/:id/reject", async (req, res) => {
     res.status(500).json({ error: "Failed to reject change" });
   }
 });
-var isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-var staticPath = isServerless ? path.join(__dirname, "../client") : path.join(__dirname, "../client");
-app.use(express.static(staticPath));
+var clientPath = path.join(__dirname, "client");
+app.use(express.static(clientPath));
 app.get("*", (_req, res) => {
   try {
-    res.sendFile(path.join(__dirname, "../client/index.html"));
+    const indexPath = path.join(clientPath, "index.html");
+    res.sendFile(indexPath);
   } catch (error) {
     console.error("Error serving index.html:", error);
     res.status(404).json({ error: "Frontend not found. Please build the frontend first." });

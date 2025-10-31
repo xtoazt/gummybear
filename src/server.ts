@@ -53,7 +53,7 @@ app.use(async (_req, _res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, '../dist')));
+// Static files are served from client directory
 
 // Store active peers for WebRTC signaling
 // Format: { peerId: { userId, username, role, lastSeen, signalingData } }
@@ -468,16 +468,16 @@ app.post('/api/pending-changes/:id/reject', async (req, res) => {
 });
 
 // Serve static files from React build
-const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-const staticPath = isServerless 
-  ? path.join(__dirname, '../client') 
-  : path.join(__dirname, '../client');
-app.use(express.static(staticPath));
+// In bundled/serverless: __dirname points to dist/, so client is at ./client
+// In development: __dirname points to dist/, so client is at ./client
+const clientPath = path.join(__dirname, 'client');
+app.use(express.static(clientPath));
 
 // Serve the main app (React)
 app.get('*', (_req, res) => {
   try {
-    res.sendFile(path.join(__dirname, '../client/index.html'));
+    const indexPath = path.join(clientPath, 'index.html');
+    res.sendFile(indexPath);
   } catch (error) {
     console.error('Error serving index.html:', error);
     res.status(404).json({ error: 'Frontend not found. Please build the frontend first.' });

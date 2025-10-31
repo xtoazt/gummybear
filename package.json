@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && vite build",
-    "build:server": "tsc -p tsconfig.server.json && npm run bundle:server",
+    "build:server": "npm run build:client && tsc -p tsconfig.server.json && npm run bundle:server",
     "bundle:server": "node scripts/bundle-server.js",
     "build:client": "vite build",
     "dev": "vite",

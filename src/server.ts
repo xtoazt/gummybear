@@ -1,6 +1,4 @@
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -8,7 +6,6 @@ import path from 'path';
 import Database from './lib/database.js';
 import { UserModel } from './lib/models/User.js';
 import { MessageModel } from './lib/models/Message.js';
-// RequestModel is used inside AIController
 import { AIController } from './lib/ai/AIController.js';
 import { PendingChangeModel } from './lib/models/PendingChange.js';
 import jwt from 'jsonwebtoken';
@@ -22,14 +19,6 @@ const __dirname = dirname(__filename);
 dotenv.config();
 
 const app = express();
-const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  },
-  path: '/chat/socket.io/'
-});
 
 // Middleware
 app.use(helmet());
@@ -42,313 +31,52 @@ const db = new Database();
 const userModel = new UserModel(db);
 const messageModel = new MessageModel(db);
 const pendingChangeModel = new PendingChangeModel(db);
-// requestModel is created inside AIController
 const aiController = new AIController(db);
 
-// Store active users
-const activeUsers = new Map<string, { socketId: string; user: any; lastSeen: Date }>();
-const userSockets = new Map<string, string>(); // username -> socketId
+// Store active peers for WebRTC signaling
+// Format: { peerId: { userId, username, role, lastSeen, signalingData } }
+const activePeers = new Map<string, {
+  userId: number;
+  username: string;
+  role: string;
+  lastSeen: Date;
+  signalingData?: any;
+}>();
+
+// Cleanup inactive peers (older than 30 seconds)
+setInterval(() => {
+  const now = new Date();
+  for (const [peerId, peer] of activePeers.entries()) {
+    if (now.getTime() - peer.lastSeen.getTime() > 30000) {
+      activePeers.delete(peerId);
+    }
+  }
+}, 10000);
 
 // JWT secret
 const JWT_SECRET = process.env.JWT_SECRET || 'gummybear-secret-key';
 
-// Middleware to authenticate socket connections
-io.use(async (socket, next) => {
+// Middleware to authenticate requests
+async function authenticateRequest(req: express.Request): Promise<any | null> {
   try {
-    const token = socket.handshake.auth.token;
+    const token = req.headers.authorization?.replace('Bearer ', '') || 
+                  req.body.token || 
+                  req.query.token;
     if (!token) {
-      return next(new Error('Authentication error'));
+      return null;
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     const user = await userModel.findById(decoded.userId);
     
     if (!user || user.status !== 'approved') {
-      return next(new Error('User not found or not approved'));
+      return null;
     }
 
-    socket.data.user = user;
-    next();
+    return user;
   } catch (err) {
-    next(new Error('Authentication error'));
+    return null;
   }
-});
-
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  const user = socket.data.user;
-  console.log(`User ${user.username} connected`);
-
-  // Store user as active
-  activeUsers.set(user.username, {
-    socketId: socket.id,
-    user: user,
-    lastSeen: new Date()
-  });
-  userSockets.set(user.username, socket.id);
-
-  // Join user to their personal room
-  socket.join(`user:${user.username}`);
-
-  // Join global chat room
-  socket.join('global');
-
-  // Send online users list to all clients
-  broadcastOnlineUsers();
-
-  // Handle setting username (for initial login)
-  socket.on('set-username', async (data) => {
-    try {
-      const { username, password } = data;
-      
-      // Try to authenticate
-      const authenticatedUser = await userModel.authenticate(username, password);
-      
-      if (authenticatedUser) {
-        // Generate JWT token
-        const token = jwt.sign(
-          { userId: authenticatedUser.id, username: authenticatedUser.username },
-          JWT_SECRET,
-          { expiresIn: '24h' }
-        );
-
-        socket.emit('username-accepted', authenticatedUser.username);
-        socket.emit('token', token);
-        socket.emit('user-data', {
-          id: authenticatedUser.id,
-          username: authenticatedUser.username,
-          role: authenticatedUser.role,
-          status: authenticatedUser.status,
-          created_at: authenticatedUser.created_at,
-          last_seen: authenticatedUser.last_seen || new Date().toISOString()
-        });
-      } else {
-        // Check if user exists but password is wrong
-        // const existingUser = await userModel.findById(0); // This is a hack, we need a better way
-        socket.emit('username-error', 'Invalid username or password');
-      }
-    } catch (error) {
-      console.error('Username setting error:', error);
-      socket.emit('username-error', 'Authentication failed');
-    }
-  });
-
-  // Handle chat messages
-  socket.on('chat-message', async (message) => {
-    try {
-      if (!user || !message.trim()) return;
-
-      // Check if user can type
-      if (!userModel.canType(user)) {
-        socket.emit('error', 'You do not have permission to send messages');
-        return;
-      }
-
-      // Save message to database
-      const success = await messageModel.create(
-        user.id,
-        message,
-        'global'
-      );
-
-      if (success) {
-        // Broadcast to all users in global chat
-        io.to('global').emit('chat-message', {
-          username: user.username,
-          message: message,
-          timestamp: new Date().toISOString(),
-          role: user.role
-        });
-      }
-    } catch (error) {
-      console.error('Chat message error:', error);
-      socket.emit('error', 'Failed to send message');
-    }
-  });
-
-  // Handle direct messages
-  socket.on('dm-message', async (data) => {
-    try {
-      const { targetUsername, message } = data;
-      
-      if (!user || !message.trim()) return;
-
-      // Check if user can type
-      if (!userModel.canType(user)) {
-        socket.emit('error', 'You do not have permission to send messages');
-        return;
-      }
-
-      // Check if target user exists and is online
-      const targetSocketId = userSockets.get(targetUsername);
-      if (!targetSocketId) {
-        socket.emit('dm-error', 'User not found or offline');
-        return;
-      }
-
-      // Save DM to database
-      const success = await messageModel.create(
-        user.id,
-        message,
-        'dm',
-        undefined, // We'll need to get the target user's ID
-        'text'
-      );
-
-      if (success) {
-        // Send to target user
-        io.to(targetSocketId).emit('dm-message', {
-          from: user.username,
-          to: targetUsername,
-          message: message,
-          timestamp: new Date().toISOString()
-        });
-
-        // Send confirmation to sender
-        socket.emit('dm-message', {
-          from: user.username,
-          to: targetUsername,
-          message: message,
-          timestamp: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error('DM message error:', error);
-      socket.emit('dm-error', 'Failed to send message');
-    }
-  });
-
-  // Handle getting online users
-  socket.on('get-online-users', () => {
-    const onlineUsers = Array.from(activeUsers.keys());
-    socket.emit('online-users', onlineUsers);
-  });
-
-  // AI Control Handlers (only for support/king/admin roles)
-  if (user.role === 'support' || user.role === 'king' || user.role === 'admin') {
-    // AI can get full context
-    socket.on('ai-get-context', async () => {
-      try {
-        const context = await aiController.getFullContext();
-        socket.emit('ai-context', context);
-      } catch (error) {
-        console.error('AI context error:', error);
-        socket.emit('ai-error', 'Failed to get context');
-      }
-    });
-
-    // AI can execute actions
-    socket.on('ai-action', async (data: { action: string; params: any }) => {
-      try {
-        const isKing = user.role === 'king';
-        const result = await aiController.executeAction(data.action, data.params, user.id, isKing);
-        
-        // Broadcast result
-        socket.emit('ai-action-result', {
-          action: data.action,
-          success: true,
-          result
-        });
-
-        // If change is pending, notify king
-        if (result.pending && isKing === false) {
-          // Notify all king users
-          activeUsers.forEach((userData, username) => {
-            if (userData.user.role === 'king') {
-              const kingSocket = io.sockets.sockets.get(userSockets.get(username)!);
-              if (kingSocket) {
-                kingSocket.emit('pending-change-created', result);
-              }
-            }
-          });
-        }
-
-        // If action was to send a message, broadcast it
-        if (data.action === 'send_message') {
-          io.to('global').emit('chat-message', {
-            username: 'GummyBear AI',
-            message: data.params.content,
-            timestamp: new Date().toISOString(),
-            role: 'support'
-          });
-        }
-      } catch (error: any) {
-        console.error('AI action error:', error);
-        socket.emit('ai-action-result', {
-          action: data.action,
-          success: false,
-          error: error.message
-        });
-      }
-    });
-
-    // AI can get capabilities
-    socket.on('ai-capabilities', () => {
-      socket.emit('ai-capabilities', aiController.getCapabilities());
-    });
-  }
-
-  // King-only handlers
-  if (user.role === 'king') {
-    // Get pending changes
-    socket.on('get-pending-changes', async () => {
-      try {
-        const changes = await pendingChangeModel.getAllPending();
-        socket.emit('pending-changes', changes);
-      } catch (error) {
-        console.error('Get pending changes error:', error);
-        socket.emit('error', 'Failed to get pending changes');
-      }
-    });
-
-    // Approve pending change
-    socket.on('approve-change', async (data: { changeId: number }) => {
-      try {
-        await pendingChangeModel.approve(data.changeId, user.id);
-        await aiController.executeApprovedChange(data.changeId);
-        
-        socket.emit('change-approved', { changeId: data.changeId });
-        
-        // Notify all clients about updated pending changes
-        io.emit('pending-changes-updated');
-      } catch (error) {
-        console.error('Approve change error:', error);
-        socket.emit('error', 'Failed to approve change');
-      }
-    });
-
-    // Reject pending change
-    socket.on('reject-change', async (data: { changeId: number }) => {
-      try {
-        await pendingChangeModel.reject(data.changeId, user.id);
-        socket.emit('change-rejected', { changeId: data.changeId });
-        
-        // Notify all clients about updated pending changes
-        io.emit('pending-changes-updated');
-      } catch (error) {
-        console.error('Reject change error:', error);
-        socket.emit('error', 'Failed to reject change');
-      }
-    });
-  }
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log(`User ${user.username} disconnected`);
-    
-    // Remove from active users
-    activeUsers.delete(user.username);
-    userSockets.delete(user.username);
-    
-    // Broadcast updated online users
-    broadcastOnlineUsers();
-  });
-});
-
-// Helper function to broadcast online users
-function broadcastOnlineUsers() {
-  const onlineUsers = Array.from(activeUsers.keys());
-  io.emit('online-users', onlineUsers);
 }
 
 // API Routes
@@ -356,17 +84,282 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Authentication endpoint
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    const authenticatedUser = await userModel.authenticate(username, password);
+    
+    if (authenticatedUser) {
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: authenticatedUser.id, username: authenticatedUser.username },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          id: authenticatedUser.id,
+          username: authenticatedUser.username,
+          role: authenticatedUser.role,
+          status: authenticatedUser.status,
+          created_at: authenticatedUser.created_at,
+          last_seen: authenticatedUser.last_seen || new Date().toISOString()
+        }
+      });
+    } else {
+      res.status(401).json({ error: 'Invalid username or password' });
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
+// WebRTC Signaling Endpoints
+// Register/update peer presence
+app.post('/api/signaling/register', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { peerId } = req.body;
+    if (!peerId) {
+      return res.status(400).json({ error: 'peerId required' });
+    }
+
+    activePeers.set(peerId, {
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      lastSeen: new Date()
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Register peer error:', error);
+    res.status(500).json({ error: 'Failed to register peer' });
+  }
+});
+
+// Get list of online peers
+app.get('/api/signaling/peers', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const peers = Array.from(activePeers.entries()).map(([peerId, peer]) => ({
+      peerId,
+      username: peer.username,
+      role: peer.role,
+      userId: peer.userId
+    }));
+
+    res.json({ peers });
+  } catch (error) {
+    console.error('Get peers error:', error);
+    res.status(500).json({ error: 'Failed to get peers' });
+  }
+});
+
+// Store signaling offer
+app.post('/api/signaling/offer', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { peerId, targetPeerId, offer } = req.body;
+    if (!peerId || !targetPeerId || !offer) {
+      return res.status(400).json({ error: 'peerId, targetPeerId, and offer required' });
+    }
+
+    const targetPeer = activePeers.get(targetPeerId);
+    if (!targetPeer) {
+      return res.status(404).json({ error: 'Target peer not found' });
+    }
+
+    // Store offer temporarily (in production, use Redis or database)
+    targetPeer.signalingData = { type: 'offer', from: peerId, offer };
+    activePeers.set(targetPeerId, targetPeer);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Store offer error:', error);
+    res.status(500).json({ error: 'Failed to store offer' });
+  }
+});
+
+// Store signaling answer
+app.post('/api/signaling/answer', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { peerId, targetPeerId, answer } = req.body;
+    if (!peerId || !targetPeerId || !answer) {
+      return res.status(400).json({ error: 'peerId, targetPeerId, and answer required' });
+    }
+
+    const targetPeer = activePeers.get(targetPeerId);
+    if (!targetPeer) {
+      return res.status(404).json({ error: 'Target peer not found' });
+    }
+
+    // Store answer temporarily
+    targetPeer.signalingData = { type: 'answer', from: peerId, answer };
+    activePeers.set(targetPeerId, targetPeer);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Store answer error:', error);
+    res.status(500).json({ error: 'Failed to store answer' });
+  }
+});
+
+// Store ICE candidate
+app.post('/api/signaling/ice-candidate', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { peerId, targetPeerId, candidate } = req.body;
+    if (!peerId || !targetPeerId || !candidate) {
+      return res.status(400).json({ error: 'peerId, targetPeerId, and candidate required' });
+    }
+
+    const targetPeer = activePeers.get(targetPeerId);
+    if (!targetPeer) {
+      return res.status(404).json({ error: 'Target peer not found' });
+    }
+
+    // Store ICE candidate
+    if (!targetPeer.signalingData) {
+      targetPeer.signalingData = { type: 'ice-candidate', candidates: [] };
+    }
+    if (!targetPeer.signalingData.candidates) {
+      targetPeer.signalingData.candidates = [];
+    }
+    targetPeer.signalingData.candidates.push({ from: peerId, candidate });
+    activePeers.set(targetPeerId, targetPeer);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Store ICE candidate error:', error);
+    res.status(500).json({ error: 'Failed to store ICE candidate' });
+  }
+});
+
+// Poll for signaling data (for serverless compatibility)
+app.get('/api/signaling/poll/:peerId', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { peerId } = req.params;
+    const peer = activePeers.get(peerId);
+
+    if (peer && peer.signalingData) {
+      const data = peer.signalingData;
+      // Clear signaling data after retrieval
+      peer.signalingData = undefined;
+      activePeers.set(peerId, peer);
+      res.json({ data });
+    } else {
+      res.json({ data: null });
+    }
+  } catch (error) {
+    console.error('Poll signaling error:', error);
+    res.status(500).json({ error: 'Failed to poll signaling data' });
+  }
+});
+
+// Chat message endpoint (messages go through database, then peers sync via WebRTC)
+app.post('/api/chat/message', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!userModel.canType(user)) {
+      return res.status(403).json({ error: 'You do not have permission to send messages' });
+    }
+
+    const { message, channel = 'global' } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message required' });
+    }
+
+    // Save message to database
+    const success = await messageModel.create(
+      user.id,
+      message,
+      channel
+    );
+
+    if (success) {
+      res.json({
+        success: true,
+        message: {
+          username: user.username,
+          message: message,
+          timestamp: new Date().toISOString(),
+          role: user.role
+        }
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to save message' });
+    }
+  } catch (error) {
+    console.error('Chat message error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Get recent messages
+app.get('/api/chat/messages', async (req, res) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const channel = req.query.channel as string || 'global';
+    const limit = parseInt(req.query.limit as string) || 50;
+
+    // Get messages from database
+    const messages = await messageModel.getChannelMessages(channel, limit);
+    res.json({ messages });
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ error: 'Failed to get messages' });
+  }
+});
+
 // AI Control API Endpoints
 app.post('/api/ai/action', async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = await userModel.findById(decoded.userId);
-
+    const user = await authenticateRequest(req);
     if (!user || !['support', 'king', 'admin'].includes(user.role)) {
       return res.status(403).json({ error: 'AI access restricted' });
     }
@@ -384,14 +377,7 @@ app.post('/api/ai/action', async (req, res) => {
 
 app.get('/api/ai/context', async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = await userModel.findById(decoded.userId);
-
+    const user = await authenticateRequest(req);
     if (!user || !['support', 'king', 'admin'].includes(user.role)) {
       return res.status(403).json({ error: 'AI access restricted' });
     }
@@ -411,14 +397,7 @@ app.get('/api/ai/capabilities', (_req, res) => {
 // King-only API endpoints for pending changes
 app.get('/api/pending-changes', async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = await userModel.findById(decoded.userId);
-
+    const user = await authenticateRequest(req);
     if (!user || user.role !== 'king') {
       return res.status(403).json({ error: 'King access only' });
     }
@@ -433,14 +412,7 @@ app.get('/api/pending-changes', async (req, res) => {
 
 app.post('/api/pending-changes/:id/approve', async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = await userModel.findById(decoded.userId);
-
+    const user = await authenticateRequest(req);
     if (!user || user.role !== 'king') {
       return res.status(403).json({ error: 'King access only' });
     }
@@ -458,14 +430,7 @@ app.post('/api/pending-changes/:id/approve', async (req, res) => {
 
 app.post('/api/pending-changes/:id/reject', async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = await userModel.findById(decoded.userId);
-
+    const user = await authenticateRequest(req);
     if (!user || user.role !== 'king') {
       return res.status(403).json({ error: 'King access only' });
     }
@@ -481,31 +446,50 @@ app.post('/api/pending-changes/:id/reject', async (req, res) => {
 });
 
 // Serve static files from React build
-app.use(express.static(path.join(__dirname, '../client')));
+const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+const staticPath = isServerless 
+  ? path.join(__dirname, '../client') 
+  : path.join(__dirname, '../client');
+app.use(express.static(staticPath));
 
 // Serve the main app (React)
 app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, '../client/index.html'));
+  try {
+    res.sendFile(path.join(__dirname, '../client/index.html'));
+  } catch (error) {
+    console.error('Error serving index.html:', error);
+    res.status(404).json({ error: 'Frontend not found. Please build the frontend first.' });
+  }
 });
 
-// Initialize database and start server
-async function startServer() {
-  try {
-    // Create tables
-    await db.createTables();
-    console.log('✅ Database tables created successfully');
-
-    const PORT = process.env.PORT || 3000;
-    server.listen(PORT, () => {
-      console.log(`🍭 GummyBear server running on port ${PORT}`);
-      console.log(`🔗 Socket.IO available at /chat/socket.io/`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
+// Initialize database tables (run once on cold start)
+let dbInitialized = false;
+async function ensureDbInitialized() {
+  if (!dbInitialized) {
+    try {
+      await db.createTables();
+      dbInitialized = true;
+      console.log('✅ Database tables initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize database:', error);
+      // Don't throw - allow function to continue
+    }
   }
 }
 
-startServer();
+// Vercel serverless function handler
+export default async function handler(req: any, res: any) {
+  // Initialize database on first request
+  await ensureDbInitialized();
+  
+  // Handle all requests through Express
+  return app(req, res, () => {
+    // Fallback if no route matches
+    if (!res.headersSent) {
+      res.status(404).json({ error: 'Not found' });
+    }
+  });
+}
 
-export { app, server, io };
+// Export app for direct use
+export { app };

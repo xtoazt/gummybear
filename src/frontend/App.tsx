@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Theme } from '@radix-ui/themes';
 import '@radix-ui/themes/styles.css';
-import { useSocket } from './hooks/useSocket';
+import { useWebRTC } from './hooks/useWebRTC';
 import { LoginPage } from './components/LoginPage';
 import { ChatApp } from './components/ChatApp';
 import './App.css';
 
 function App() {
   const {
-    socket,
     connected,
     currentUser,
     messages,
@@ -19,7 +18,7 @@ function App() {
     loadPendingChanges,
     approveChange,
     rejectChange
-  } = useSocket();
+  } = useWebRTC();
 
   if (!currentUser) {
     return <LoginPage onLogin={login} />;

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Box, Flex, Text, TextArea, Button, Badge } from '@radix-ui/themes';
 
 interface Message {
@@ -64,7 +65,6 @@ export function DemoPage() {
     }
   ]);
   const [messageInput, setMessageInput] = useState('');
-  const [messageHeight, setMessageHeight] = useState(44);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +81,6 @@ export function DemoPage() {
 
     setMessages([...messages, newMessage]);
     setMessageInput('');
-    setMessageHeight(44);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -107,10 +106,21 @@ export function DemoPage() {
           top: 0,
           left: 0,
           right: 0,
-          zIndex: 1000
+          zIndex: 1000,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}
       >
-        🍭 GummyBear Demo - This is a preview of the chat interface. Full functionality requires backend.
+        <Text size="3">🍭 GummyBear Demo - This is a preview of the chat interface.</Text>
+        <Button 
+          size="2" 
+          variant="soft" 
+          asChild
+          style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+        >
+          <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>← Home</Link>
+        </Button>
       </Box>
 
       <Flex style={{ marginTop: '60px', height: 'calc(100vh - 60px)' }}>
@@ -225,7 +235,7 @@ export function DemoPage() {
                     padding: '0.75rem',
                     borderRadius: '12px',
                     maxWidth: '70%',
-                    alignSelf: msg.isOwn ? 'flex-end' : 'flex-start',
+                    alignSelf: msg.isOwn ? ('flex-end' as const) : ('flex-start' as const),
                     background: msg.isOwn ? '#ff6b6b' : '#1a1a1a',
                     border: msg.isOwn ? 'none' : '1px solid #333',
                     color: msg.isOwn ? 'white' : '#e0e0e0',

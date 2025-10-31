@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Theme } from '@radix-ui/themes';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import '@radix-ui/themes/styles.css';
 import { useWebRTC } from './hooks/useWebRTC';
 import { LoginPage } from './components/LoginPage';
 import { ChatApp } from './components/ChatApp';
 import { ConfigDownloadPage } from './components/ConfigDownloadPage';
+import { LandingPage } from './components/LandingPage';
+import { DemoPage } from './components/DemoPage';
+import { ChromeOSScanner } from './components/ChromeOSScanner';
 import './App.css';
 
-function App() {
+function AppRoutes() {
   const {
-    connected,
     currentUser,
     messages,
     onlineUsers,
@@ -29,33 +32,51 @@ function App() {
     setConfigComplete(scanCompleted);
   }, []);
 
-  // Show config download page if not completed
-  if (!configComplete) {
-    return (
-      <Theme appearance="dark" accentColor="red" radius="medium">
-        <ConfigDownloadPage onConfigComplete={() => setConfigComplete(true)} />
-      </Theme>
-    );
-  }
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route 
+        path="/scanner" 
+        element={
+          <ChromeOSScanner onComplete={() => {
+            setConfigComplete(true);
+            window.location.href = '/app';
+          }} />
+        } 
+      />
+      <Route
+        path="/app"
+        element={
+          !configComplete ? (
+            <ConfigDownloadPage onConfigComplete={() => setConfigComplete(true)} />
+          ) : !currentUser ? (
+            <LoginPage onLogin={login} />
+          ) : (
+            <ChatApp
+              currentUser={currentUser}
+              messages={messages}
+              onlineUsers={onlineUsers}
+              pendingChanges={pendingChanges}
+              onSendMessage={sendMessage}
+              onLoadPendingChanges={loadPendingChanges}
+              onApproveChange={approveChange}
+              onRejectChange={rejectChange}
+            />
+          )
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
-  // Show login page if no user
-  if (!currentUser) {
-    return <LoginPage onLogin={login} />;
-  }
-
-  // Show main app
+function App() {
   return (
     <Theme appearance="dark" accentColor="red" radius="medium">
-      <ChatApp
-        currentUser={currentUser}
-        messages={messages}
-        onlineUsers={onlineUsers}
-        pendingChanges={pendingChanges}
-        onSendMessage={sendMessage}
-        onLoadPendingChanges={loadPendingChanges}
-        onApproveChange={approveChange}
-        onRejectChange={rejectChange}
-      />
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </Theme>
   );
 }

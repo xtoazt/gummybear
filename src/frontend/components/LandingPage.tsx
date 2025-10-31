@@ -1,4 +1,4 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 import { Box, Container, Heading, Text, Button, Flex, Card } from '@radix-ui/themes';
 
 export function LandingPage() {
@@ -60,25 +60,25 @@ export function LandingPage() {
           <Flex gap="3" justify="center" wrap="wrap">
             <Button 
               size="4" 
-              onClick={() => window.location.href = '/app'}
+              asChild
               style={{ 
                 background: 'linear-gradient(135deg, #ff6b6b, #ee5a52)',
                 padding: '1rem 2rem',
                 fontSize: '1.1rem'
               }}
             >
-              🚀 Launch App
+              <Link to="/app">🚀 Launch App</Link>
             </Button>
             <Button 
               size="4" 
               variant="outline"
-              onClick={() => window.location.href = '/demo'}
+              asChild
               style={{ 
                 padding: '1rem 2rem',
                 fontSize: '1.1rem'
               }}
             >
-              👀 View Demo
+              <Link to="/demo">👀 View Demo</Link>
             </Button>
             <Button 
               size="4" 

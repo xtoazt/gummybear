@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Container, Heading, Text, Button, TextArea } from '@radix-ui/themes';
+import { useState, useEffect } from 'react';
+import { Box, Container, Heading, Text, Button } from '@radix-ui/themes';
 
 export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
   const [scanning, setScanning] = useState(false);

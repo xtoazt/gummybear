@@ -20,18 +20,40 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../dist')));
-
 // Initialize database and models
 const db = new Database();
 const userModel = new UserModel(db);
 const messageModel = new MessageModel(db);
 const pendingChangeModel = new PendingChangeModel(db);
 const aiController = new AIController(db);
+
+// Initialize database tables (run once on cold start)
+let dbInitialized = false;
+async function ensureDbInitialized() {
+  if (!dbInitialized) {
+    try {
+      await db.createTables();
+      dbInitialized = true;
+      console.log('✅ Database tables initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize database:', error);
+      // Don't throw - allow function to continue
+    }
+  }
+}
+
+// Middleware
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+
+// Middleware to ensure database is initialized on first request
+app.use(async (_req, _res, next) => {
+  await ensureDbInitialized();
+  next();
+});
+
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // Store active peers for WebRTC signaling
 // Format: { peerId: { userId, username, role, lastSeen, signalingData } }
@@ -462,34 +484,6 @@ app.get('*', (_req, res) => {
   }
 });
 
-// Initialize database tables (run once on cold start)
-let dbInitialized = false;
-async function ensureDbInitialized() {
-  if (!dbInitialized) {
-    try {
-      await db.createTables();
-      dbInitialized = true;
-      console.log('✅ Database tables initialized');
-    } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
-      // Don't throw - allow function to continue
-    }
-  }
-}
-
 // Vercel serverless function handler
-export default async function handler(req: any, res: any) {
-  // Initialize database on first request
-  await ensureDbInitialized();
-  
-  // Handle all requests through Express
-  return app(req, res, () => {
-    // Fallback if no route matches
-    if (!res.headersSent) {
-      res.status(404).json({ error: 'Not found' });
-    }
-  });
-}
-
-// Export app for direct use
-export { app };
+// Vercel's @vercel/node builder automatically wraps Express apps
+export default app;

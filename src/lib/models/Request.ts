@@ -1,4 +1,4 @@
-import Database from '../database';
+import Database from '../database.js';
 
 export interface AccessRequest {
   id: number;

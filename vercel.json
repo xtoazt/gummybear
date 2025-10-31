@@ -3,18 +3,23 @@
   "buildCommand": "npm run build:server",
   "builds": [
     {
-      "src": "dist/server.js",
-      "use": "@vercel/node"
+      "src": "dist/server.bundle.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "dist/**"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/dist/server.js"
+      "dest": "/dist/server.bundle.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/server.js"
+      "dest": "/dist/server.bundle.js"
     }
   ]
 }

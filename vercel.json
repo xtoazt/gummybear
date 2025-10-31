@@ -1,19 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:server",
-  "functions": {
-    "dist/server.bundle.js": {
-      "runtime": "@vercel/node"
-    }
-  },
+  "buildCommand": "npm run build:client",
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/dist/server.bundle.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/dist/server.bundle.js"
+      "dest": "/api/index.ts"
     }
   ]
 }

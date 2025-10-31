@@ -1,8 +1,8 @@
-import Database from '../database.js';
-import { UserModel } from '../models/User.js';
-import { MessageModel } from '../models/Message.js';
-import { RequestModel } from '../models/Request.js';
-import { PendingChangeModel } from '../models/PendingChange.js';
+import Database from '../database';
+import { UserModel } from '../models/User';
+import { MessageModel } from '../models/Message';
+import { RequestModel } from '../models/Request';
+import { PendingChangeModel } from '../models/PendingChange';
 import { Octokit } from '@octokit/rest';
 
 export interface AICapabilities {

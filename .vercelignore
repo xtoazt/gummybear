@@ -6,7 +6,10 @@ README.md
 test_db.php
 test_db.py
 api/*.php
-lib
+^lib/
+^views/
 setup.php
 demo.html
 index.html
+composer.json
+composer.lock

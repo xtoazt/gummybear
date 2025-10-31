@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WebRTCPeerManager } from '../../lib/webrtc/WebRTCPeerManager.js';
-import { User, Message, PendingChange } from '../types/index.js';
+import { WebRTCPeerManager } from '../../lib/webrtc/WebRTCPeerManager';
+import { User, Message, PendingChange } from '../types';
 
 interface UseWebRTCReturn {
   connected: boolean;

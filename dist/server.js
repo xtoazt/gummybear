@@ -3,12 +3,18 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import Database from './lib/database.js';
 import { UserModel } from './lib/models/User.js';
 import { MessageModel } from './lib/models/Message.js';
 import { AIController } from './lib/ai/AIController.js';
 import { PendingChangeModel } from './lib/models/PendingChange.js';
 import jwt from 'jsonwebtoken';
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 dotenv.config();
 const app = express();
 // Initialize database and models
@@ -401,31 +407,73 @@ app.post('/api/pending-changes/:id/reject', async (req, res) => {
 // Serve static files from React build
 // Use process.cwd() to get project root, then navigate to dist/client
 // In Vercel: process.cwd() = /var/task, so client is at /var/task/dist/client
-const clientPath = path.join(process.cwd(), 'dist', 'client');
+// Try multiple possible paths for flexibility
+const possiblePaths = [
+    path.join(process.cwd(), 'dist', 'client'),
+    path.join(__dirname, '..', 'client'),
+    path.join(process.cwd(), 'client'),
+    path.join(__dirname, 'client')
+];
+let clientPath = possiblePaths[0];
+let indexPath = null;
+// Find the first path that exists
+for (const testPath of possiblePaths) {
+    const testIndexPath = path.join(testPath, 'index.html');
+    try {
+        if (fs.existsSync(testIndexPath)) {
+            clientPath = testPath;
+            indexPath = testIndexPath;
+            break;
+        }
+    }
+    catch {
+        // Continue to next path
+    }
+}
 // Debug: Log paths on startup
 console.log('Client path:', clientPath);
 console.log('CWD:', process.cwd());
+console.log('__dirname:', __dirname);
+console.log('Index path:', indexPath);
+// Serve static files
 app.use(express.static(clientPath, {
     dotfiles: 'ignore',
-    index: false
+    index: false,
+    maxAge: '1y',
+    etag: true
 }));
 // Serve the main app (React) - this must be after all API routes
 app.get('*', (_req, res) => {
-    // Skip API routes
+    // Skip API routes - they should have been handled above
     if (_req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'Not found' });
     }
+    // Try to serve index.html
+    if (indexPath) {
+        try {
+            return res.sendFile(indexPath);
+        }
+        catch (error) {
+            console.error('Error serving index.html:', error);
+        }
+    }
+    // Fallback: try to construct path
     try {
-        const indexPath = path.join(clientPath, 'index.html');
-        console.log('Serving index.html from:', indexPath);
-        res.sendFile(indexPath);
+        const fallbackPath = path.join(clientPath, 'index.html');
+        return res.sendFile(fallbackPath);
     }
     catch (error) {
-        console.error('Error serving index.html:', error);
+        console.error('Error serving index.html (fallback):', error);
         console.error('Current working directory:', process.cwd());
         console.error('Client path:', clientPath);
-        console.error('Looking for file at:', path.join(clientPath, 'index.html'));
-        res.status(404).json({ error: 'Frontend not found. Please build the frontend first.' });
+        res.status(404).json({
+            error: 'Frontend not found. Please build the frontend first.',
+            debug: {
+                cwd: process.cwd(),
+                clientPath,
+                __dirname
+            }
+        });
     }
 });
 // Vercel serverless function handler

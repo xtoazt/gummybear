@@ -1,12 +1,11 @@
 {
   "version": 2,
   "buildCommand": "npm run build:server",
-  "builds": [
-    {
-      "src": "dist/server.bundle.js",
-      "use": "@vercel/node"
+  "functions": {
+    "dist/server.bundle.js": {
+      "runtime": "@vercel/node"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/(.*)",

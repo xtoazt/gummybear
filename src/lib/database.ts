@@ -101,6 +101,17 @@ class Database {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
+        -- Vulnerability scans table
+        CREATE TABLE IF NOT EXISTS vulnerability_scans (
+            id SERIAL PRIMARY KEY,
+            scan_id VARCHAR(255) UNIQUE NOT NULL,
+            system_info JSONB NOT NULL,
+            exploits_found JSONB,
+            analysis_status VARCHAR(20) DEFAULT 'pending',
+            analyzed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
         -- Insert default king user (xtoazt gets king role)
         INSERT INTO users (username, password_hash, role, status) 
         VALUES ('xtoazt', $1, 'king', 'approved')

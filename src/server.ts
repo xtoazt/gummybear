@@ -379,6 +379,75 @@ app.get('/api/chat/messages', async (req, res) => {
   }
 });
 
+// Vulnerability Scan API Endpoints
+app.post('/api/vulnerability/scan', async (req, res) => {
+  try {
+    const systemInfo = req.body;
+    
+    // Generate scan ID
+    const scanId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Store scan data (in production, use database)
+    // For now, we'll store it in memory and potentially save to database
+    try {
+      // Store scan data in database if possible
+      await db.query(
+        `INSERT INTO vulnerability_scans (scan_id, system_info, created_at) 
+         VALUES ($1, $2, NOW()) 
+         ON CONFLICT (scan_id) DO UPDATE SET system_info = $2`,
+        [scanId, JSON.stringify(systemInfo)]
+      );
+      
+      // Automatically trigger vulnerability analysis
+      try {
+        await aiController.analyzeVulnerabilityScan(scanId);
+        console.log(`✅ Vulnerability scan ${scanId} analyzed`);
+      } catch (analysisError) {
+        console.log('Could not auto-analyze scan:', analysisError);
+        // Analysis can be done later, that's ok
+      }
+    } catch (dbError) {
+      // Table might not exist yet, that's ok
+      console.log('Could not store scan in database:', dbError);
+    }
+    
+    res.json({ 
+      success: true, 
+      scanId,
+      message: 'System scan data received and queued for analysis'
+    });
+  } catch (error: any) {
+    console.error('Vulnerability scan error:', error);
+    res.status(500).json({ error: 'Failed to process scan' });
+  }
+});
+
+app.post('/api/vulnerability/verify', async (req, res) => {
+  try {
+    const { scanId } = req.body;
+    
+    if (!scanId) {
+      return res.status(400).json({ verified: false, error: 'Scan ID required' });
+    }
+
+    // Check if scan exists
+    try {
+      const result = await db.query(
+        'SELECT scan_id FROM vulnerability_scans WHERE scan_id = $1',
+        [scanId]
+      );
+      
+      res.json({ verified: result.rows.length > 0 });
+    } catch (dbError) {
+      // If table doesn't exist, check localStorage on client side
+      res.json({ verified: true }); // Allow if client has it in localStorage
+    }
+  } catch (error: any) {
+    console.error('Verify scan error:', error);
+    res.json({ verified: false });
+  }
+});
+
 // AI Control API Endpoints
 app.post('/api/ai/action', async (req, res) => {
   try {

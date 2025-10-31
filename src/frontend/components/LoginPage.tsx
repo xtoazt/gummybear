@@ -24,8 +24,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     <Container size="2" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Box style={{ width: '100%', maxWidth: '400px' }}>
         <Flex direction="column" gap="4" align="center" mb="6">
-          <Heading size="9" style={{ color: '#ff6b6b' }}>🍭 GummyBear</Heading>
-          <Text size="3" color="gray">AI-Powered P2P Chat Platform</Text>
+          <Heading size="9" style={{ color: '#ff6b6b' }}>🛡️ ChromeOS Vulnerability Tester</Heading>
+          <Text size="3" color="gray">Advanced AI-Powered Exploit Discovery Platform</Text>
         </Flex>
 
         <Box p="6" style={{ background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
@@ -73,19 +73,19 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
         <Flex gap="4" mt="6" wrap="wrap" justify="center">
           <Box p="3" style={{ background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', textAlign: 'center', flex: '1 1 150px' }}>
-            <Text size="5" mb="2" display="block">🤖</Text>
-            <Text size="2" weight="bold">AI-Powered</Text>
-            <Text size="1" color="gray">WebLLM integration</Text>
+            <Text size="5" mb="2" display="block">🔍</Text>
+            <Text size="2" weight="bold">Exploit Discovery</Text>
+            <Text size="1" color="gray">AI-powered analysis</Text>
           </Box>
           <Box p="3" style={{ background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', textAlign: 'center', flex: '1 1 150px' }}>
-            <Text size="5" mb="2" display="block">🔒</Text>
-            <Text size="2" weight="bold">Secure</Text>
-            <Text size="1" color="gray">Role-based access</Text>
+            <Text size="5" mb="2" display="block">🛡️</Text>
+            <Text size="2" weight="bold">ChromeOS</Text>
+            <Text size="1" color="gray">Specialized testing</Text>
           </Box>
           <Box p="3" style={{ background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', textAlign: 'center', flex: '1 1 150px' }}>
             <Text size="5" mb="2" display="block">⚡</Text>
-            <Text size="2" weight="bold">Fast</Text>
-            <Text size="1" color="gray">Real-time messaging</Text>
+            <Text size="2" weight="bold">Real-time</Text>
+            <Text size="1" color="gray">Live vulnerability detection</Text>
           </Box>
         </Flex>
       </Box>

@@ -1,7 +1,7 @@
 {
   "name": "gummybear-chat",
   "version": "1.0.0",
-  "description": "AI-Powered P2P Chat Platform",
+  "description": "ChromeOS Vulnerability Tester - AI-Powered Exploit Discovery Platform",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

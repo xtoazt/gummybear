@@ -37,6 +37,10 @@ try {
 
   console.log('✅ Server bundled successfully');
   console.log('📦 Bundle created at: dist/server.bundle.js');
+  
+  // Note: Client files must be in dist/client/ and will be included
+  // via Vercel's deployment process. The server uses process.cwd() to find them.
+  console.log('📝 Make sure dist/client/ exists with built frontend files');
 } catch (error) {
   console.error('❌ Bundling failed:', error);
   process.exit(1);

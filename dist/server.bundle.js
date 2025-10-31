@@ -816,10 +816,6 @@ var AIController = class {
 
 // dist/server.js
 import jwt from "jsonwebtoken";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = dirname(__filename);
 dotenv.config();
 var app = express();
 var db = new database_default();
@@ -1157,14 +1153,26 @@ app.post("/api/pending-changes/:id/reject", async (req, res) => {
     res.status(500).json({ error: "Failed to reject change" });
   }
 });
-var clientPath = path.join(__dirname, "client");
-app.use(express.static(clientPath));
+var clientPath = path.join(process.cwd(), "dist", "client");
+console.log("Client path:", clientPath);
+console.log("CWD:", process.cwd());
+app.use(express.static(clientPath, {
+  dotfiles: "ignore",
+  index: false
+}));
 app.get("*", (_req, res) => {
+  if (_req.path.startsWith("/api")) {
+    return res.status(404).json({ error: "Not found" });
+  }
   try {
     const indexPath = path.join(clientPath, "index.html");
+    console.log("Serving index.html from:", indexPath);
     res.sendFile(indexPath);
   } catch (error) {
     console.error("Error serving index.html:", error);
+    console.error("Current working directory:", process.cwd());
+    console.error("Client path:", clientPath);
+    console.error("Looking for file at:", path.join(clientPath, "index.html"));
     res.status(404).json({ error: "Frontend not found. Please build the frontend first." });
   }
 });

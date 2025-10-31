@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WebRTCPeerManager } from '../../lib/webrtc/WebRTCPeerManager';
+import { WebRTCPeerManager } from '~lib/webrtc/WebRTCPeerManager';
 import { User, Message, PendingChange } from '../types';
 
 interface UseWebRTCReturn {

@@ -35,7 +35,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': frontendRoot
+      '@': frontendRoot,
+      '~lib': path.resolve(projectRoot, 'src', 'lib')
     },
     // Ensure TypeScript files can be resolved without extensions
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']

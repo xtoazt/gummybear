@@ -1,21 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const projectRoot = process.cwd();
+const frontendRoot = path.join(projectRoot, 'src/frontend');
+const outputDir = path.join(projectRoot, 'dist/client');
 
 export default defineConfig({
   plugins: [react()],
-  root: path.resolve(__dirname, 'src/frontend'),
+  root: frontendRoot,
   build: {
-    outDir: path.resolve(__dirname, 'dist/client'),
-    emptyOutDir: true,
-    rollupOptions: {
-      input: path.resolve(__dirname, 'src/frontend/index.html')
-    }
+    outDir: outputDir,
+    emptyOutDir: true
   },
   server: {
     port: 3000,
@@ -33,7 +29,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src/frontend')
+      '@': frontendRoot
     }
-  }
+  },
+  publicDir: false,
+  clearScreen: false
 });

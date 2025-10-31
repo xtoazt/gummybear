@@ -1,13 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 // Use process.cwd() for better compatibility with build environments like Vercel
 const projectRoot = process.cwd();
 const frontendRoot = path.resolve(projectRoot, 'src', 'frontend');
 const outputDir = path.resolve(projectRoot, 'dist', 'client');
-const indexHtmlPath = path.resolve(frontendRoot, 'index.html');
 
 export default defineConfig({
   plugins: [react()],
@@ -16,7 +14,7 @@ export default defineConfig({
     outDir: outputDir,
     emptyOutDir: true,
     rollupOptions: {
-      input: indexHtmlPath
+      input: 'index.html'  // Relative to root (src/frontend)
     }
   },
   server: {

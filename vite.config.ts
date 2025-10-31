@@ -12,10 +12,8 @@ export default defineConfig({
   root: frontendRoot,
   build: {
     outDir: outputDir,
-    emptyOutDir: true,
-    rollupOptions: {
-      input: 'index.html'  // Relative to root (src/frontend)
-    }
+    emptyOutDir: true
+    // No explicit input - Vite will auto-detect index.html in the root directory when root is set
   },
   server: {
     port: 3000,

@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && vite build",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.json && node -e \"console.log('✅ Server build complete')\"",
     "build:client": "vite build",
     "dev": "vite",
     "dev:server": "tsc --watch",

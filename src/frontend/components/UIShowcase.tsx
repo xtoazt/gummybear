@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { ThemeSwitcher } from './ThemeSwitcher';
 import '../styles/showcase.css';
 
 // Feature Tabs Component
@@ -245,14 +246,17 @@ export function UIShowcase() {
           animate={{ opacity: 1, y: 0 }}
           className="showcase-header"
         >
-          <Link to="/app" className="back-link">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="back-link-content"
-            >
-              ← Back to Chat
-            </motion.div>
-          </Link>
+          <div className="flex justify-between items-start mb-8">
+            <Link to="/app" className="back-link">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="back-link-content"
+              >
+                ← Back to Chat
+              </motion.div>
+            </Link>
+            <ThemeSwitcher />
+          </div>
           
           <motion.h1
             initial={{ scale: 0.9, opacity: 0 }}

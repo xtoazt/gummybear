@@ -30,7 +30,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-black flex items-center justify-center overflow-hidden relative">
+    <div className="min-h-screen w-full bg-base-100 flex items-center justify-center overflow-hidden relative">
       {/* Animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-pink-900/20"></div>
       

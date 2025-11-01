@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
 import { KingDashboard } from './KingDashboard';
 import { UserList } from './UserList';
+import { ThemeSwitcher } from './ThemeSwitcher';
 import type { User, Message, PendingChange, Channel } from '../types';
 import { api } from '../../utils/api';
 
@@ -80,8 +81,11 @@ export function ChatApp({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex h-screen overflow-hidden bg-black w-full"
+      className="flex h-screen overflow-hidden bg-base-100 w-full"
     >
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeSwitcher />
+      </div>
       <Sidebar
         currentChannel={currentChannel}
         onChannelChange={setCurrentChannel}

@@ -39,12 +39,12 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
   const roleOrder = ['king', 'admin', 'support', 'twin', 'bankinda'];
 
   return (
-    <div className="w-60 bg-black/80 border-l border-white/10 h-screen overflow-y-auto shadow-lg" style={{ backdropFilter: 'blur(16px)' }}>
-      <div className="p-4 border-b border-white/10">
-        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-2">
+    <div className="w-60 bg-base-200/80 backdrop-blur-lg border-l border-base-300 h-screen overflow-y-auto shadow-lg">
+      <div className="p-4 border-b border-base-300">
+        <h3 className="text-sm font-bold text-base-content/60 uppercase tracking-wide mb-2">
           Members — {users.length}
         </h3>
-        <div className="text-xs text-pink-400 font-semibold">
+        <div className="text-xs text-primary font-semibold">
           {onlineUsers.length} online
         </div>
       </div>

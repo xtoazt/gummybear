@@ -188,16 +188,15 @@ export function ChatArea({
   });
 
   return (
-    <div className="flex flex-col flex-1 bg-black h-screen relative overflow-hidden">
+    <div className="flex flex-col flex-1 bg-base-100 h-screen relative overflow-hidden">
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="px-6 py-4 bg-black/80 border-b border-white/10 flex justify-between items-center shadow-lg"
-        style={{ backdropFilter: 'blur(16px)' }}
+        className="px-6 py-4 bg-base-200/80 backdrop-blur-lg border-b border-base-300 flex justify-between items-center shadow-lg"
       >
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+          <h2 className="text-xl font-bold text-base-content">
             {CHANNEL_NAMES[currentChannel]}
           </h2>
           {mentionedMessages.length > 0 && (
@@ -217,13 +216,13 @@ export function ChatArea({
           >
             {ROLE_NAMES[currentUser.role] || currentUser.role}
           </div>
-          <span className="text-gray-400 text-sm">{currentUser.username}</span>
+          <span className="text-base-content/70 text-sm">{currentUser.username}</span>
           <button
             onClick={() => {
               localStorage.removeItem('gummybear_token');
               window.location.reload();
             }}
-            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm text-base-content/70 hover:text-base-content transition-colors"
           >
             Logout
           </button>
@@ -231,7 +230,7 @@ export function ChatArea({
       </motion.div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 relative bg-black">
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 relative bg-base-100">
         <AnimatePresence mode="popLayout">
           {channelMessages.length === 0 ? (
             <motion.div
@@ -466,8 +465,7 @@ export function ChatArea({
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="p-6 bg-black/80 border-t border-white/10 relative shadow-2xl"
-          style={{ backdropFilter: 'blur(16px)' }}
+          className="p-6 bg-base-200/80 backdrop-blur-lg border-t border-base-300 relative shadow-2xl"
         >
           {/* Mention Suggestions */}
           {showMentionSuggestions && (

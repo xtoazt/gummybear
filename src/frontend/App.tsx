@@ -72,8 +72,17 @@ function AppRoutes() {
 }
 
 function App() {
+  useEffect(() => {
+    // Set default monochrome theme on mount
+    document.documentElement.setAttribute('data-theme', 'monochrome');
+    const savedTheme = localStorage.getItem('daisyui-theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+  }, []);
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-base-100">
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

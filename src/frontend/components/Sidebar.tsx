@@ -1,5 +1,4 @@
-import React from 'react';
-import { Flex, Box, Badge, Text } from '@radix-ui/themes';
+import { motion } from 'framer-motion';
 import type { Channel } from '../types';
 
 interface SidebarProps {
@@ -21,104 +20,79 @@ const CHANNELS = [
 
 export function Sidebar({ currentChannel, onChannelChange, isKing, pendingCount, onlineUsers }: SidebarProps) {
   return (
-    <Flex
-      direction="column"
-      style={{
-        width: '80px',
-        background: '#1a1a1a',
-        borderRight: '1px solid #333',
-        alignItems: 'center',
-        padding: '1rem 0',
-        gap: '1rem',
-        position: 'relative'
-      }}
-    >
+    <div className="w-20 bg-black/50 backdrop-blur-sm border-r border-white/10 flex flex-col items-center py-4 gap-2 relative">
       {CHANNELS.map((channel) => (
-        <Box
+        <motion.button
           key={channel.id}
           onClick={() => onChannelChange(channel.id)}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          className="relative w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all group"
           style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            background: currentChannel === channel.id ? '#ff6b6b' : 'transparent',
-            transition: 'all 0.3s ease',
-            position: 'relative'
-          }}
-          onMouseEnter={(e) => {
-            if (currentChannel !== channel.id) {
-              e.currentTarget.style.background = '#333';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (currentChannel !== channel.id) {
-              e.currentTarget.style.background = 'transparent';
-            }
+            background: currentChannel === channel.id 
+              ? 'linear-gradient(135deg, #ff6b6b, #ee5a52)'
+              : 'transparent'
           }}
         >
-          <Text size="6">{channel.icon}</Text>
-        </Box>
+          {currentChannel === channel.id && (
+            <motion.div
+              layoutId="activeChannel"
+              className="absolute inset-0 rounded-xl"
+              style={{ background: 'linear-gradient(135deg, #ff6b6b, #ee5a52)' }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          )}
+          <span className="relative z-10">{channel.icon}</span>
+          
+          {/* Tooltip */}
+          <div className="absolute left-full ml-2 px-3 py-1.5 bg-black/90 border border-white/10 rounded-lg text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            {channel.label}
+          </div>
+        </motion.button>
       ))}
 
       {isKing && (
-        <Box
+        <motion.button
           onClick={() => onChannelChange('code')}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          className="relative w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all group mt-2"
           style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            background: currentChannel === 'code' ? '#ff6b6b' : 'transparent',
-            transition: 'all 0.3s ease',
-            position: 'relative'
-          }}
-          onMouseEnter={(e) => {
-            if (currentChannel !== 'code') {
-              e.currentTarget.style.background = '#333';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (currentChannel !== 'code') {
-              e.currentTarget.style.background = 'transparent';
-            }
+            background: currentChannel === 'code' 
+              ? 'linear-gradient(135deg, #ff6b6b, #ee5a52)'
+              : 'transparent'
           }}
         >
-          <Text size="6">💻</Text>
+          {currentChannel === 'code' && (
+            <motion.div
+              layoutId="activeCodeChannel"
+              className="absolute inset-0 rounded-xl"
+              style={{ background: 'linear-gradient(135deg, #ff6b6b, #ee5a52)' }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          )}
+          <span className="relative z-10">💻</span>
+          
           {pendingCount > 0 && (
-            <Badge
-              style={{
-                position: 'absolute',
-                top: '-5px',
-                right: '-5px',
-                background: '#ff6b6b',
-                color: 'white',
-                minWidth: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.7rem',
-                fontWeight: 'bold',
-                border: '2px solid #1a1a1a'
-              }}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-black"
             >
               {pendingCount > 99 ? '99+' : pendingCount}
-            </Badge>
+            </motion.div>
           )}
-        </Box>
+          
+          {/* Tooltip */}
+          <div className="absolute left-full ml-2 px-3 py-1.5 bg-black/90 border border-white/10 rounded-lg text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            Code Review
+          </div>
+        </motion.button>
       )}
 
-      <Box style={{ position: 'absolute', bottom: '1rem', fontSize: '0.8rem', color: '#666' }}>
+      <div className="absolute bottom-4 text-xs text-gray-500">
         {onlineUsers} online
-      </Box>
-    </Flex>
+      </div>
+    </div>
   );
 }

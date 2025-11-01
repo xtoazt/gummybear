@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Theme } from '@radix-ui/themes';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import '@radix-ui/themes/styles.css';
 import { useWebRTC } from './hooks/useWebRTC';
 import { LoginPage } from './components/LoginPage';
 import { ChatApp } from './components/ChatApp';
@@ -9,6 +7,7 @@ import { ConfigDownloadPage } from './components/ConfigDownloadPage';
 import { LandingPage } from './components/LandingPage';
 import { DemoPage } from './components/DemoPage';
 import { ChromeOSScanner } from './components/ChromeOSScanner';
+import { UIShowcase } from './components/UIShowcase';
 import './App.css';
 
 function AppRoutes() {
@@ -27,7 +26,6 @@ function AppRoutes() {
   const [configComplete, setConfigComplete] = useState(false);
 
   useEffect(() => {
-    // Check if config was completed
     const scanCompleted = localStorage.getItem('chromeos_scan_completed') === 'true';
     setConfigComplete(scanCompleted);
   }, []);
@@ -35,6 +33,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/showcase" element={<UIShowcase />} />
       <Route path="/demo" element={<DemoPage />} />
       <Route 
         path="/scanner" 
@@ -73,11 +72,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Theme appearance="dark" accentColor="red" radius="medium">
+    <div className="dark bg-black min-h-screen">
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
-    </Theme>
+    </div>
   );
 }
 

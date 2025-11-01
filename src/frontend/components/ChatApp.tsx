@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Flex, Box, Button, Text, Badge } from '@radix-ui/themes';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
 import { KingDashboard } from './KingDashboard';
@@ -27,7 +27,6 @@ export function ChatApp({
   onRejectChange
 }: ChatAppProps) {
   const [currentChannel, setCurrentChannel] = useState<Channel>('global');
-  const [showKingPanel, setShowKingPanel] = useState(false);
 
   const isKing = currentUser.role === 'king';
 
@@ -38,7 +37,11 @@ export function ChatApp({
   }, [isKing, currentChannel, onLoadPendingChanges]);
 
   return (
-    <Flex style={{ height: '100vh', overflow: 'hidden' }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex h-screen overflow-hidden bg-black"
+    >
       <Sidebar
         currentChannel={currentChannel}
         onChannelChange={setCurrentChannel}
@@ -47,7 +50,7 @@ export function ChatApp({
         onlineUsers={onlineUsers.length}
       />
       
-      <Flex direction="column" style={{ flex: 1 }}>
+      <div className="flex-1 flex flex-col">
         <ChatArea
           currentUser={currentUser}
           messages={messages}
@@ -55,16 +58,23 @@ export function ChatApp({
           onSendMessage={onSendMessage}
           onlineUsers={onlineUsers}
         />
-      </Flex>
+      </div>
 
       {isKing && currentChannel === 'code' && (
-        <KingDashboard
-          pendingChanges={pendingChanges}
-          onApprove={onApproveChange}
-          onReject={onRejectChange}
-          onRefresh={onLoadPendingChanges}
-        />
+        <motion.div
+          initial={{ x: 500, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 500, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          <KingDashboard
+            pendingChanges={pendingChanges}
+            onApprove={onApproveChange}
+            onReject={onRejectChange}
+            onRefresh={onLoadPendingChanges}
+          />
+        </motion.div>
       )}
-    </Flex>
+    </motion.div>
   );
 }

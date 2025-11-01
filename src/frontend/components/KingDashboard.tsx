@@ -1,5 +1,4 @@
-import React from 'react';
-import { Flex, Box, Text, Button, ScrollArea, Badge, Code } from '@radix-ui/themes';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { PendingChange } from '../types';
 
 interface KingDashboardProps {
@@ -11,127 +10,111 @@ interface KingDashboardProps {
 
 export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }: KingDashboardProps) {
   return (
-    <Box
-      style={{
-        width: '500px',
-        background: '#1a1a1a',
-        borderLeft: '1px solid #333',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
-      <Box
-        p="4"
-        style={{
-          background: '#0f0f0f',
-          borderBottom: '1px solid #333',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
+    <div className="w-[500px] bg-black/50 backdrop-blur-sm border-l border-white/10 h-screen flex flex-col">
+      {/* Header */}
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="px-6 py-4 bg-black/50 backdrop-blur-sm border-b border-white/10 flex justify-between items-center"
       >
-        <Text size="5" weight="bold" style={{ color: '#ff6b6b' }}>
+        <h2 className="text-xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
           💻 Code Review
-        </Text>
-        <Button variant="ghost" size="2" onClick={onRefresh}>
+        </h2>
+        <motion.button
+          onClick={onRefresh}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+        >
           Refresh
-        </Button>
-      </Box>
+        </motion.button>
+      </motion.div>
 
-      <ScrollArea style={{ flex: 1 }}>
-        <Box p="4">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <AnimatePresence mode="popLayout">
           {pendingChanges.length === 0 ? (
-            <Box style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-              <Text size="3" color="gray" style={{ fontStyle: 'italic' }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center justify-center h-full"
+            >
+              <p className="text-gray-500 italic text-center">
                 No pending changes. All clear! 👑
-              </Text>
-            </Box>
+              </p>
+            </motion.div>
           ) : (
-            <Flex direction="column" gap="3">
-              {pendingChanges.map((change) => {
-                const actionData = change.action_data || {};
-                const params = actionData.params || {};
-                
-                let detailsContent = '';
-                if (change.change_type === 'modify_code') {
-                  detailsContent = `File: ${params.filePath}\n\n${(params.content || '').substring(0, 500)}...`;
-                } else {
-                  detailsContent = JSON.stringify(actionData, null, 2);
-                }
+            pendingChanges.map((change, index) => {
+              const actionData = change.action_data || {};
+              const params = actionData.params || {};
+              
+              let detailsContent = '';
+              if (change.change_type === 'modify_code') {
+                detailsContent = `File: ${params.filePath}\n\n${(params.content || '').substring(0, 500)}...`;
+              } else {
+                detailsContent = JSON.stringify(actionData, null, 2);
+              }
 
-                return (
-                  <Box
-                    key={change.id}
-                    p="4"
-                    style={{
-                      background: '#0f0f0f',
-                      border: '1px solid #333',
-                      borderRadius: '12px',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <Flex justify="between" align="start" mb="3">
-                      <Box>
-                        <Text size="4" weight="bold" mb="1" style={{ display: 'block' }}>
-                          {change.title}
-                        </Text>
-                        <Text size="2" color="gray">
-                          {change.description || ''}
-                        </Text>
-                      </Box>
-                      <Badge style={{ background: '#ff6b6b', color: 'white' }}>
+              return (
+                <motion.div
+                  key={change.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="relative group"
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                  <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="text-base font-bold mb-1 text-white">{change.title}</h3>
+                        <p className="text-sm text-gray-400">{change.description || ''}</p>
+                      </div>
+                      <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full border border-red-500/30">
                         {change.change_type}
-                      </Badge>
-                    </Flex>
+                      </span>
+                    </div>
 
-                    <Box
-                      p="3"
-                      mb="3"
-                      style={{
-                        background: '#0a0a0a',
-                        border: '1px solid #333',
-                        borderRadius: '8px',
-                        maxHeight: '200px',
-                        overflow: 'auto'
-                      }}
-                    >
-                      <Code style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                    <div className="mb-3 p-3 bg-black/50 border border-white/5 rounded-lg max-h-[200px] overflow-auto">
+                      <code className="text-xs text-gray-400 whitespace-pre-wrap break-all">
                         {detailsContent}
-                      </Code>
-                    </Box>
+                      </code>
+                    </div>
 
-                    <Flex gap="2">
-                      <Button
-                        style={{ flex: 1, background: '#4caf50' }}
+                    <div className="flex gap-2">
+                      <motion.button
                         onClick={() => {
                           if (confirm('Approve and execute this change?')) {
                             onApprove(change.id);
                           }
                         }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg font-semibold text-white hover:shadow-lg hover:shadow-green-500/50 transition-all"
                       >
                         ✓ Approve
-                      </Button>
-                      <Button
-                        variant="soft"
-                        color="red"
-                        style={{ flex: 1 }}
+                      </motion.button>
+                      <motion.button
                         onClick={() => {
                           if (confirm('Reject this change?')) {
                             onReject(change.id);
                           }
                         }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex-1 px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition-all"
                       >
                         ✗ Reject
-                      </Button>
-                    </Flex>
-                  </Box>
-                );
-              })}
-            </Flex>
+                      </motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })
           )}
-        </Box>
-      </ScrollArea>
-    </Box>
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }

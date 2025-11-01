@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Flex, Box, TextField, Button, Text, Badge, ScrollArea } from '@radix-ui/themes';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { User, Message, Channel } from '../types';
 
 interface ChatAreaProps {
@@ -71,149 +71,144 @@ export function ChatArea({ currentUser, messages, currentChannel, onSendMessage,
   const channelMessages = messages.filter(m => m.channel === currentChannel);
 
   return (
-    <Flex direction="column" style={{ flex: 1, background: '#0f0f0f', height: '100vh' }}>
-      <Box
-        p="4"
-        style={{
-          background: '#1a1a1a',
-          borderBottom: '1px solid #333',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
+    <div className="flex flex-col flex-1 bg-black h-screen relative overflow-hidden">
+      {/* Header */}
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="px-6 py-4 bg-black/50 backdrop-blur-sm border-b border-white/10 flex justify-between items-center"
       >
-        <Text size="5" weight="bold">
-          {CHANNEL_NAMES[currentChannel]}
-        </Text>
-        <Flex gap="3" align="center">
-          <Badge
-            style={{
-              background: ROLE_COLORS[currentUser.role] || '#666',
-              color: 'white'
-            }}
+        <div className="flex items-center gap-3">
+          <span className="text-green-400 font-mono text-sm">$</span>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+            {CHANNEL_NAMES[currentChannel]}
+          </h2>
+          <span className="text-green-400/50 font-mono text-xs">// {currentChannel}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div
+            className="px-3 py-1 rounded-full text-sm font-semibold text-white"
+            style={{ background: ROLE_COLORS[currentUser.role] || '#666' }}
           >
             {ROLE_NAMES[currentUser.role] || currentUser.role}
-          </Badge>
-          <Text size="2" color="gray">
-            {currentUser.username}
-          </Text>
-          <Button
-            variant="ghost"
+          </div>
+          <span className="text-gray-400 text-sm">{currentUser.username}</span>
+          <button
             onClick={() => {
               localStorage.removeItem('gummybear_token');
               window.location.reload();
             }}
+            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
           >
             Logout
-          </Button>
-        </Flex>
-      </Box>
+          </button>
+        </div>
+      </motion.div>
 
-      <ScrollArea style={{ flex: 1 }}>
-        <Box p="4" style={{ minHeight: '100%' }}>
-          <Flex direction="column" gap="2">
-            {channelMessages.length === 0 ? (
-              <Text size="3" color="gray" align="center" my="6">
-                No messages yet. Start the conversation!
-              </Text>
-            ) : (
-              channelMessages.map((message) => {
-                const isOwn = message.sender_id === currentUser.id;
-                const roleColor = ROLE_COLORS[message.role] || '#666';
-                
-                return (
-                  <Flex
-                    key={message.id}
-                    direction={isOwn ? 'row-reverse' : 'row'}
-                    gap="2"
-                    style={{ maxWidth: '70%', marginLeft: isOwn ? 'auto' : '0' }}
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        <AnimatePresence mode="popLayout">
+          {channelMessages.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center justify-center h-full"
+            >
+              <p className="text-gray-500 text-center">No messages yet. Start the conversation!</p>
+            </motion.div>
+          ) : (
+            channelMessages.map((message, index) => {
+              const isOwn = message.sender_id === currentUser.id;
+              const roleColor = ROLE_COLORS[message.role] || '#666';
+              
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                  style={{ maxWidth: '70%', marginLeft: isOwn ? 'auto' : '0' }}
+                >
+                  {/* Avatar */}
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                    style={{ background: roleColor }}
                   >
-                    <Box
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: roleColor,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '0.8rem',
-                        flexShrink: 0
-                      }}
-                    >
-                      {message.username.charAt(0).toUpperCase()}
-                    </Box>
-                    <Box
-                      style={{
-                        background: isOwn ? '#ff6b6b' : '#1a1a1a',
-                        border: isOwn ? 'none' : '1px solid #333',
-                        borderRadius: '12px',
-                        padding: '0.75rem',
-                        flex: 1
-                      }}
-                    >
-                      <Flex gap="2" align="center" mb="1">
-                        <Text size="2" weight="bold">
-                          {message.username}
-                        </Text>
-                        <Badge
-                          style={{
-                            background: `${roleColor}20`,
-                            color: roleColor,
-                            fontSize: '0.7rem'
-                          }}
-                        >
-                          {ROLE_NAMES[message.role] || message.role}
-                        </Badge>
-                        <Text size="1" color="gray">
-                          {formatTime(message.created_at)}
-                        </Text>
-                      </Flex>
-                      <Text size="2" style={{ wordBreak: 'break-word' }}>
-                        {message.content}
-                      </Text>
-                    </Box>
-                  </Flex>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </Flex>
-        </Box>
-      </ScrollArea>
+                    {message.username.charAt(0).toUpperCase()}
+                  </motion.div>
 
+                  {/* Message Bubble */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className={`relative group px-4 py-3 rounded-2xl ${
+                      isOwn 
+                        ? 'rounded-tr-sm' 
+                        : 'rounded-tl-sm'
+                    }`}
+                    style={{
+                      background: isOwn 
+                        ? `linear-gradient(135deg, ${roleColor}, ${roleColor}dd)`
+                        : 'rgba(26, 26, 26, 0.8)',
+                      border: isOwn ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-sm">{message.username}</span>
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{
+                          background: `${roleColor}20`,
+                          color: roleColor
+                        }}
+                      >
+                        {ROLE_NAMES[message.role] || message.role}
+                      </span>
+                      <span className="text-xs text-gray-500">{formatTime(message.created_at)}</span>
+                    </div>
+                    <p className="text-sm text-white/90 break-words">{message.content}</p>
+                  </motion.div>
+                </motion.div>
+              );
+            })
+          )}
+        </AnimatePresence>
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
       {canType && (
-        <Box
-          p="4"
-          style={{
-            background: '#1a1a1a',
-            borderTop: '1px solid #333'
-          }}
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="p-4 bg-black/50 backdrop-blur-sm border-t border-white/10"
         >
-          <form onSubmit={handleSubmit}>
-            <Flex gap="3">
-              <TextField.Root
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                placeholder="Type your message..."
-                style={{ flex: 1 }}
-                size="3"
-                maxLength={2000}
-              />
-              <Button
-                type="submit"
-                size="3"
-                style={{ background: '#ff6b6b' }}
-                disabled={!messageInput.trim() || Date.now() - lastMessageTime < 1500}
-              >
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <input
+              type="text"
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
+              placeholder="Type your message..."
+              maxLength={2000}
+              className="flex-1 px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+            />
+            <motion.button
+              type="submit"
+              disabled={!messageInput.trim() || Date.now() - lastMessageTime < 1500}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#ff6b6b_0%,#ee5a52_50%,#ff6b6b_100%)]"></span>
+              <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white backdrop-blur-3xl">
                 Send
-              </Button>
-            </Flex>
+              </span>
+            </motion.button>
           </form>
-        </Box>
+        </motion.div>
       )}
-    </Flex>
+    </div>
   );
 }

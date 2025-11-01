@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Container, Heading, Text, Button } from '@radix-ui/themes';
+import { motion } from 'framer-motion';
 
 export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
   const [scanning, setScanning] = useState(false);
@@ -27,7 +27,6 @@ export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
     setScanning(true);
     setStatus('info');
     setOutput([]);
-    setStatus('info');
     
     log('Initializing ChromeOS vulnerability scanner...');
 
@@ -145,103 +144,89 @@ export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
   };
 
   return (
-    <Container 
-      size="3" 
-      style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#1a1a1a',
-        padding: '2rem'
-      }}
-    >
-      <Box style={{ width: '100%', maxWidth: '800px' }}>
-        <Heading 
-          size="8" 
-          style={{ 
-            color: '#ff6b6b', 
-            textAlign: 'center',
-            marginBottom: '2rem'
-          }}
+    <div className="min-h-screen w-full bg-black flex items-center justify-center overflow-hidden relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-pink-900/20"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      
+      <div className="container mx-auto px-4 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-4xl w-full mx-auto"
         >
-          🛡️ Chrome OS Vulnerability Scanner
-        </Heading>
-        
-        <Box
-          style={{
-            textAlign: 'center',
-            marginBottom: '2rem',
-            padding: '1rem',
-            borderRadius: '8px',
-            background: 
-              status === 'success' ? 'rgba(40, 167, 69, 0.2)' :
-              status === 'error' ? 'rgba(220, 53, 69, 0.2)' :
-              'rgba(23, 162, 184, 0.2)',
-            border: `1px solid ${
-              status === 'success' ? 'rgba(40, 167, 69, 0.5)' :
-              status === 'error' ? 'rgba(220, 53, 69, 0.5)' :
-              'rgba(23, 162, 184, 0.5)'
-            }`,
-            color: 
-              status === 'success' ? '#28a745' :
-              status === 'error' ? '#dc3545' :
-              '#17a2b8'
-          }}
-        >
-          {completed ? (
-            <Text size="4" weight="bold">
-              ✅ Scan completed! You can now access the vulnerability tester.
-            </Text>
-          ) : scanning ? (
-            <Text size="4" weight="bold">
-              🔄 Scanning system... Please wait...
-            </Text>
-          ) : (
-            <Text size="4" weight="bold">
-              Click the button below to scan your system for vulnerabilities.
-            </Text>
-          )}
-        </Box>
-
-        <Button
-          onClick={handleScan}
-          disabled={scanning || completed}
-          size="4"
-          style={{
-            width: '100%',
-            padding: '1rem',
-            fontSize: '1.1rem',
-            background: completed ? '#555' : '#007BFF',
-            cursor: completed ? 'not-allowed' : 'pointer',
-            marginBottom: '2rem'
-          }}
-        >
-          {completed ? '✅ Scan Completed' : scanning ? '🔄 Scanning...' : '🔍 Start Vulnerability Scan'}
-        </Button>
-
-        {output.length > 0 && (
-          <Box
-            style={{
-              background: '#2a2a2a',
-              padding: '1.5rem',
-              border: '1px solid #444',
-              borderRadius: '8px',
-              height: '400px',
-              overflowY: 'auto',
-              fontFamily: "'Courier New', monospace",
-              fontSize: '0.85rem',
-              whiteSpace: 'pre-wrap' as const
-            }}
+          <motion.h1
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-5xl font-bold mb-8 text-center"
           >
-            <Text style={{ color: '#fff', lineHeight: 1.6 }}>
-              {output.join('\n')}
-            </Text>
-          </Box>
-        )}
-      </Box>
-    </Container>
+            <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent">
+              🛡️ Chrome OS Vulnerability Scanner
+            </span>
+          </motion.h1>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className={`text-center mb-8 p-6 rounded-lg border ${
+              status === 'success' 
+                ? 'bg-green-500/20 border-green-500/50 text-green-400'
+                : status === 'error'
+                ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                : 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+            }`}
+          >
+            {completed ? (
+              <p className="text-xl font-bold">
+                ✅ Scan completed! You can now access the vulnerability tester.
+              </p>
+            ) : scanning ? (
+              <p className="text-xl font-bold">
+                🔄 Scanning system... Please wait...
+              </p>
+            ) : (
+              <p className="text-xl font-bold">
+                Click the button below to scan your system for vulnerabilities.
+              </p>
+            )}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-8"
+          >
+            <motion.button
+              onClick={handleScan}
+              disabled={scanning || completed}
+              whileHover={!completed && !scanning ? { scale: 1.02 } : {}}
+              whileTap={!completed && !scanning ? { scale: 0.98 } : {}}
+              className={`relative w-full inline-flex h-14 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black ${
+                completed || scanning ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#007BFF_0%,#0056b3_50%,#007BFF_100%)]"></span>
+              <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-black px-6 py-3 text-base font-semibold text-white backdrop-blur-3xl">
+                {completed ? '✅ Scan Completed' : scanning ? '🔄 Scanning...' : '🔍 Start Vulnerability Scan'}
+              </span>
+            </motion.button>
+          </motion.div>
+
+          {output.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-black/50 backdrop-blur-sm border border-white/10 rounded-lg p-6 h-[400px] overflow-y-auto"
+            >
+              <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap break-all">
+                {output.join('\n')}
+              </pre>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+    </div>
   );
 }
-

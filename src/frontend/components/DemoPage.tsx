@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Flex, Text, TextArea, Button, Badge } from '@radix-ui/themes';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
   id: number;
@@ -33,7 +33,7 @@ export function DemoPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: 'Welcome to GummyBear! 🍭 This is a demo of the chat interface with the new TypeScript frontend.',
+      content: 'Welcome to GummyBear! 🍭 This is a demo of the chat interface with beautiful animations.',
       username: 'xtoazt',
       role: 'king',
       isOwn: false,
@@ -49,7 +49,7 @@ export function DemoPage() {
     },
     {
       id: 3,
-      content: 'This looks amazing! The dark theme, Radix UI components, and TypeScript implementation are perfect. The role-based access control is working great!',
+      content: 'This looks amazing! The dark theme, animations, and TypeScript implementation are perfect. The role-based access control is working great!',
       username: 'you',
       role: 'twin',
       isOwn: true,
@@ -83,269 +83,159 @@ export function DemoPage() {
     setMessageInput('');
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessageInput(e.target.value);
-    e.target.style.height = 'auto';
-    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-  };
-
   const getRoleConfig = (role: string) => {
     return roleConfig[role] || { color: '#666', name: role, icon: '👤' };
   };
 
   return (
-    <Box style={{ height: '100vh', display: 'flex', background: '#0a0a0a', overflow: 'hidden' }}>
-      <Box
-        style={{
-          background: 'linear-gradient(135deg, #ff6b6b, #ee5a52)',
-          color: 'white',
-          padding: '1rem',
-          textAlign: 'center',
-          fontWeight: 600,
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
+    <div className="h-screen flex flex-col bg-black overflow-hidden">
+      {/* Header */}
+      <motion.div
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className="bg-gradient-to-r from-pink-600 to-red-600 text-white px-6 py-4 flex justify-between items-center z-50"
       >
-        <Text size="3">🍭 GummyBear Demo - This is a preview of the chat interface.</Text>
-        <Button 
-          size="2" 
-          variant="soft" 
-          asChild
-          style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+        <span className="text-lg font-semibold">🍭 GummyBear Demo - This is a preview of the chat interface.</span>
+        <Link 
+          to="/" 
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white"
         >
-          <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>← Home</Link>
-        </Button>
-      </Box>
+          ← Home
+        </Link>
+      </motion.div>
 
-      <Flex style={{ marginTop: '60px', height: 'calc(100vh - 60px)' }}>
-        <Box
-          style={{
-            width: '80px',
-            background: '#1a1a1a',
-            borderRight: '1px solid #333',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '1rem 0',
-            position: 'relative'
-          }}
-        >
+      <div className="flex flex-1 mt-16">
+        {/* Sidebar */}
+        <div className="w-20 bg-black/50 backdrop-blur-sm border-r border-white/10 flex flex-col items-center py-4 gap-2">
           {channels.map((channel) => {
             const isActive = currentChannel === channel.id;
             return (
-              <Box
+              <motion.button
                 key={channel.id}
                 onClick={() => setCurrentChannel(channel.id)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all group"
                 style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '1rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  background: isActive ? '#ff6b6b' : 'transparent',
-                  boxShadow: isActive ? '0 4px 15px rgba(255, 107, 107, 0.3)' : 'none',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = isActive ? '#ff6b6b' : '#333';
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = isActive ? '#ff6b6b' : 'transparent';
-                  e.currentTarget.style.transform = 'scale(1)';
+                  background: isActive 
+                    ? 'linear-gradient(135deg, #ff6b6b, #ee5a52)'
+                    : 'transparent'
                 }}
               >
-                <Text size="6">{channel.icon}</Text>
-                <Box
-                  style={{
-                    position: 'absolute',
-                    left: '60px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: '#333',
-                    color: 'white',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    pointerEvents: 'none',
-                    transition: 'opacity 0.3s ease',
-                    zIndex: 1000
-                  }}
-                  className="tooltip"
-                >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeChannel"
+                    className="absolute inset-0 rounded-xl"
+                    style={{ background: 'linear-gradient(135deg, #ff6b6b, #ee5a52)' }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">{channel.icon}</span>
+                <div className="absolute left-full ml-2 px-3 py-1.5 bg-black/90 border border-white/10 rounded-lg text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                   {channel.name}
-                </Box>
-              </Box>
+                </div>
+              </motion.button>
             );
           })}
-        </Box>
+        </div>
 
-        <Flex direction="column" style={{ flex: 1, background: '#0f0f0f' }}>
-          <Box
-            style={{
-              height: '60px',
-              background: '#1a1a1a',
-              borderBottom: '1px solid #333',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 2rem'
-            }}
-          >
-            <Text size="5" weight="bold" style={{ color: '#e0e0e0' }}>
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col bg-black">
+          <div className="px-6 py-4 bg-black/50 backdrop-blur-sm border-b border-white/10 flex justify-between items-center">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
               {channels.find(c => c.id === currentChannel)?.name || 'Global Chat'}
-            </Text>
-            <Flex align="center" gap="3">
-              <Badge style={{ background: '#ff6b6b', color: 'white' }}>King 👑</Badge>
-              <Text size="3" style={{ color: '#e0e0e0' }}>xtoazt</Text>
-            </Flex>
-          </Box>
+            </h2>
+            <div className="flex items-center gap-3">
+              <span
+                className="px-3 py-1 rounded-full text-sm font-semibold text-white"
+                style={{ background: '#ff6b6b' }}
+              >
+                King 👑
+              </span>
+              <span className="text-gray-400 text-sm">xtoazt</span>
+            </div>
+          </div>
 
-          <Box
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem'
-            }}
-          >
-            {messages.map((msg) => {
-              const role = getRoleConfig(msg.role);
-              return (
-                <Box
-                  key={msg.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.75rem',
-                    padding: '0.75rem',
-                    borderRadius: '12px',
-                    maxWidth: '70%',
-                    alignSelf: msg.isOwn ? ('flex-end' as const) : ('flex-start' as const),
-                    background: msg.isOwn ? '#ff6b6b' : '#1a1a1a',
-                    border: msg.isOwn ? 'none' : '1px solid #333',
-                    color: msg.isOwn ? 'white' : '#e0e0e0',
-                    borderBottomRightRadius: msg.isOwn ? '4px' : '12px',
-                    borderBottomLeftRadius: msg.isOwn ? '12px' : '4px',
-                    animation: 'messageSlide 0.3s ease-out'
-                  }}
-                >
-                  <Box
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 'bold',
-                      fontSize: '0.8rem',
-                      flexShrink: 0,
-                      background: role.color
-                    }}
+          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+            <AnimatePresence mode="popLayout">
+              {messages.map((msg, index) => {
+                const role = getRoleConfig(msg.role);
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`flex gap-3 ${msg.isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                    style={{ maxWidth: '70%', marginLeft: msg.isOwn ? 'auto' : '0' }}
                   >
-                    {msg.username.charAt(0).toUpperCase()}
-                  </Box>
-                  <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Flex align="center" gap="2" wrap="wrap" mb="1">
-                      <Text size="2" weight="bold">{msg.username}</Text>
-                      <Badge style={{ background: `${role.color}20`, color: role.color, fontSize: '0.7rem' }}>
-                        {role.name}
-                      </Badge>
-                      <Text size="1" style={{ color: '#666', marginLeft: 'auto' }}>
-                        {msg.time}
-                      </Text>
-                    </Flex>
-                    <Text size="2" style={{ lineHeight: 1.4, wordBreak: 'break-word' }}>
-                      {msg.content}
-                    </Text>
-                  </Box>
-                </Box>
-              );
-            })}
-          </Box>
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                      style={{ background: role.color }}
+                    >
+                      {msg.username.charAt(0).toUpperCase()}
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className={`px-4 py-3 rounded-2xl ${
+                        msg.isOwn ? 'rounded-tr-sm' : 'rounded-tl-sm'
+                      }`}
+                      style={{
+                        background: msg.isOwn 
+                          ? `linear-gradient(135deg, ${role.color}, ${role.color}dd)`
+                          : 'rgba(26, 26, 26, 0.8)',
+                        border: msg.isOwn ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-sm text-white">{msg.username}</span>
+                        <span
+                          className="px-2 py-0.5 rounded-full text-xs font-medium"
+                          style={{
+                            background: `${role.color}20`,
+                            color: role.color
+                          }}
+                        >
+                          {role.name}
+                        </span>
+                        <span className="text-xs text-gray-500">{msg.time}</span>
+                      </div>
+                      <p className="text-sm text-white/90 break-words">{msg.content}</p>
+                    </motion.div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
 
-          <Box
-            style={{
-              padding: '1rem',
-              background: '#1a1a1a',
-              borderTop: '1px solid #333'
-            }}
-          >
-            <form onSubmit={handleSend}>
-              <Flex gap="3" align="flex-end">
-                <TextArea
-                  value={messageInput}
-                  onChange={handleInputChange}
-                  placeholder="Type your message..."
-                  style={{
-                    flex: 1,
-                    background: '#0f0f0f',
-                    border: '1px solid #333',
-                    borderRadius: '12px',
-                    padding: '0.75rem 1rem',
-                    color: '#e0e0e0',
-                    fontSize: '1rem',
-                    resize: 'none',
-                    minHeight: '44px',
-                    maxHeight: '120px',
-                    fontFamily: 'inherit'
-                  }}
-                  rows={1}
-                  maxLength={2000}
-                />
-                <Button
-                  type="submit"
-                  style={{
-                    background: '#ff6b6b',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '12px',
-                    fontWeight: 600,
-                    fontSize: '1rem',
-                    cursor: 'pointer'
-                  }}
-                >
+          <div className="p-4 bg-black/50 backdrop-blur-sm border-t border-white/10">
+            <form onSubmit={handleSend} className="flex gap-3">
+              <textarea
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                placeholder="Type your message..."
+                maxLength={2000}
+                rows={1}
+                className="flex-1 px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all resize-none"
+                style={{ minHeight: '44px', maxHeight: '120px' }}
+              />
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black"
+              >
+                <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#ff6b6b_0%,#ee5a52_50%,#ff6b6b_100%)]"></span>
+                <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white backdrop-blur-3xl">
                   Send
-                </Button>
-              </Flex>
+                </span>
+              </motion.button>
             </form>
-          </Box>
-        </Flex>
-      </Flex>
-
-      <style>{`
-        @keyframes messageSlide {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .tooltip {
-          opacity: 0 !important;
-        }
-        .tooltip:hover {
-          opacity: 1 !important;
-        }
-      `}</style>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
-

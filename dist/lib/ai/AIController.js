@@ -86,16 +86,31 @@ export class AIController {
             const requests = await this.requestModel.getAllPending();
             // Get database schema info
             const dbInfo = await this.getDatabaseInfo();
+            // Get recent vulnerability scans for analysis
+            let vulnerabilityScans = [];
+            try {
+                const scansResult = await this.db.query(`SELECT scan_id, system_info, exploits_found, analysis_status, created_at 
+           FROM vulnerability_scans 
+           ORDER BY created_at DESC 
+           LIMIT 20`);
+                vulnerabilityScans = scansResult.rows || [];
+            }
+            catch (error) {
+                // Table might not exist yet
+                console.log('Could not fetch vulnerability scans:', error);
+            }
             return {
                 users,
                 messages: [...globalMessages, ...supportMessages, ...kajigsMessages],
                 requests,
                 database: dbInfo,
+                vulnerabilityScans,
                 siteState: {
                     totalUsers: users.length,
                     onlineUsers: 0, // Will be updated from socket
                     pendingRequests: requests.length,
-                    recentActivity: 'active'
+                    recentActivity: 'active',
+                    pendingScans: vulnerabilityScans.filter((s) => s.analysis_status === 'pending').length
                 }
             };
         }
@@ -103,6 +118,89 @@ export class AIController {
             console.error('Error getting AI context:', error);
             throw error;
         }
+    }
+    async analyzeVulnerabilityScan(scanId) {
+        try {
+            // Get scan data
+            const result = await this.db.query('SELECT * FROM vulnerability_scans WHERE scan_id = $1', [scanId]);
+            if (result.rows.length === 0) {
+                throw new Error('Scan not found');
+            }
+            const scan = result.rows[0];
+            const systemInfo = scan.system_info;
+            // Analyze for ChromeOS exploits
+            const exploits = await this.findExploits(systemInfo);
+            // Update scan with results
+            await this.db.query(`UPDATE vulnerability_scans 
+         SET exploits_found = $1, analysis_status = $2, analyzed_at = NOW()
+         WHERE scan_id = $3`, [JSON.stringify(exploits), 'completed', scanId]);
+            return exploits;
+        }
+        catch (error) {
+            console.error('Error analyzing vulnerability scan:', error);
+            throw error;
+        }
+    }
+    async findExploits(systemInfo) {
+        const exploits = [];
+        // Check for ChromeOS version vulnerabilities
+        if (systemInfo.chromeOSInfo?.chromeOSVersion) {
+            const version = systemInfo.chromeOSInfo.chromeOSVersion;
+            // Known unenrollment exploit patterns
+            if (version.match(/^(100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120)/)) {
+                exploits.push({
+                    type: 'unenrollment',
+                    severity: 'high',
+                    description: 'Potential unenrollment exploit - OOBE bypass possible in ChromeOS versions 100-120',
+                    method: 'OOBE (Out-of-Box Experience) manipulation',
+                    details: 'These versions have known vulnerabilities in the enrollment process'
+                });
+            }
+        }
+        // Check for webview vulnerabilities
+        if (systemInfo.chromeOSInfo?.chromeVersion) {
+            const chromeVersion = parseInt(systemInfo.chromeOSInfo.chromeVersion.split('.')[0]);
+            if (chromeVersion >= 90 && chromeVersion < 120) {
+                exploits.push({
+                    type: 'webview',
+                    severity: 'medium',
+                    description: 'WebView vulnerability detected',
+                    method: 'WebView component manipulation',
+                    details: 'ChromeOS WebView components in this version range have known security issues'
+                });
+            }
+        }
+        // Check file system access capabilities
+        if (systemInfo.fileSystemAccess?.supported) {
+            exploits.push({
+                type: 'filesystem',
+                severity: 'high',
+                description: 'File System Access API available',
+                method: 'Direct file system manipulation',
+                details: 'Browser has access to file system, enabling deeper system exploration'
+            });
+        }
+        // Check for developer mode indicators
+        if (systemInfo.platform && systemInfo.platform.includes('Linux')) {
+            exploits.push({
+                type: 'dev_mode',
+                severity: 'low',
+                description: 'Potential developer mode or Linux container access',
+                method: 'Linux container exploitation',
+                details: 'ChromeOS Linux environment may provide additional attack vectors'
+            });
+        }
+        // Check ChromeOS specific identifiers
+        if (systemInfo.chromeOSInfo?.isChromeOS) {
+            exploits.push({
+                type: 'chromeos_environment',
+                severity: 'info',
+                description: 'Confirmed ChromeOS environment detected',
+                method: 'OS-specific exploitation',
+                details: 'System is running ChromeOS, enabling targeted exploit research'
+            });
+        }
+        return exploits;
     }
     async getDatabaseInfo() {
         try {
@@ -257,6 +355,8 @@ export class AIController {
                 return await this.approveRequest(params.requestId, params.reviewerId);
             case 'get_context':
                 return await this.getFullContext();
+            case 'analyze_scan':
+                return await this.analyzeVulnerabilityScan(params.scanId);
             default:
                 throw new Error(`Unknown action: ${action}`);
         }

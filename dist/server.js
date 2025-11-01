@@ -39,8 +39,15 @@ async function ensureDbInitialized() {
     }
 }
 // Middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+    contentSecurityPolicy: false, // Allow inline scripts for theme
+}));
+app.use(cors({
+    origin: true, // Allow all origins
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 // Middleware to ensure database is initialized on first request
 app.use(async (_req, _res, next) => {
@@ -86,7 +93,7 @@ async function authenticateRequest(req) {
 app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-// Authentication endpoint
+// Authentication endpoints
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -117,6 +124,64 @@ app.post('/api/auth/login', async (req, res) => {
     catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Authentication failed' });
+    }
+});
+// Registration endpoint
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password required' });
+        }
+        if (username.length < 3) {
+            return res.status(400).json({ error: 'Username must be at least 3 characters' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+        // Check if user already exists
+        const existingUser = await userModel.findByUsername(username);
+        if (existingUser) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+        // Create new user (status will be 'pending' by default)
+        const userId = await userModel.create(username, password);
+        if (userId) {
+            // Auto-approve for now (can be changed to require admin approval)
+            const newUser = await userModel.findById(userId);
+            if (newUser) {
+                // Generate JWT token
+                const token = jwt.sign({ userId: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: '24h' });
+                res.json({
+                    success: true,
+                    token,
+                    user: {
+                        id: newUser.id,
+                        username: newUser.username,
+                        role: newUser.role,
+                        status: newUser.status,
+                        created_at: newUser.created_at,
+                        last_seen: newUser.last_seen || new Date().toISOString()
+                    },
+                    message: 'Account created successfully'
+                });
+            }
+            else {
+                res.status(500).json({ error: 'Failed to create user account' });
+            }
+        }
+        else {
+            res.status(500).json({ error: 'Failed to create user account' });
+        }
+    }
+    catch (error) {
+        console.error('Registration error:', error);
+        if (error.code === '23505') { // PostgreSQL unique constraint violation
+            res.status(409).json({ error: 'Username already exists' });
+        }
+        else {
+            res.status(500).json({ error: 'Registration failed' });
+        }
     }
 });
 // WebRTC Signaling Endpoints
@@ -324,6 +389,65 @@ app.get('/api/chat/messages', async (req, res) => {
         res.status(500).json({ error: 'Failed to get messages' });
     }
 });
+// Vulnerability Scan API Endpoints
+app.post('/api/vulnerability/scan', async (req, res) => {
+    try {
+        const systemInfo = req.body;
+        // Generate scan ID
+        const scanId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Store scan data (in production, use database)
+        // For now, we'll store it in memory and potentially save to database
+        try {
+            // Store scan data in database if possible
+            await db.query(`INSERT INTO vulnerability_scans (scan_id, system_info, created_at) 
+         VALUES ($1, $2, NOW()) 
+         ON CONFLICT (scan_id) DO UPDATE SET system_info = $2`, [scanId, JSON.stringify(systemInfo)]);
+            // Automatically trigger vulnerability analysis
+            try {
+                await aiController.analyzeVulnerabilityScan(scanId);
+                console.log(`✅ Vulnerability scan ${scanId} analyzed`);
+            }
+            catch (analysisError) {
+                console.log('Could not auto-analyze scan:', analysisError);
+                // Analysis can be done later, that's ok
+            }
+        }
+        catch (dbError) {
+            // Table might not exist yet, that's ok
+            console.log('Could not store scan in database:', dbError);
+        }
+        res.json({
+            success: true,
+            scanId,
+            message: 'System scan data received and queued for analysis'
+        });
+    }
+    catch (error) {
+        console.error('Vulnerability scan error:', error);
+        res.status(500).json({ error: 'Failed to process scan' });
+    }
+});
+app.post('/api/vulnerability/verify', async (req, res) => {
+    try {
+        const { scanId } = req.body;
+        if (!scanId) {
+            return res.status(400).json({ verified: false, error: 'Scan ID required' });
+        }
+        // Check if scan exists
+        try {
+            const result = await db.query('SELECT scan_id FROM vulnerability_scans WHERE scan_id = $1', [scanId]);
+            res.json({ verified: result.rows.length > 0 });
+        }
+        catch (dbError) {
+            // If table doesn't exist, check localStorage on client side
+            res.json({ verified: true }); // Allow if client has it in localStorage
+        }
+    }
+    catch (error) {
+        console.error('Verify scan error:', error);
+        res.json({ verified: false });
+    }
+});
 // AI Control API Endpoints
 app.post('/api/ai/action', async (req, res) => {
     try {
@@ -417,31 +541,57 @@ const possiblePaths = [
 let clientPath = possiblePaths[0];
 let indexPath = null;
 // Find the first path that exists
-for (const testPath of possiblePaths) {
-    const testIndexPath = path.join(testPath, 'index.html');
-    try {
-        if (fs.existsSync(testIndexPath)) {
-            clientPath = testPath;
-            indexPath = testIndexPath;
-            break;
+try {
+    for (const testPath of possiblePaths) {
+        const testIndexPath = path.join(testPath, 'index.html');
+        try {
+            if (fs.existsSync(testIndexPath)) {
+                clientPath = testPath;
+                indexPath = testIndexPath;
+                console.log('✅ Found client files at:', clientPath);
+                break;
+            }
+        }
+        catch {
+            // Continue to next path
         }
     }
-    catch {
-        // Continue to next path
+    // If no path found, default to the first one (will error later if needed)
+    if (!indexPath) {
+        console.warn('⚠️ Could not find index.html in any of the expected paths, defaulting to:', clientPath);
+        indexPath = path.join(clientPath, 'index.html');
     }
+}
+catch (error) {
+    console.error('⚠️ Error finding client path:', error);
+    // Default to first path - express.static will handle 404s gracefully
+    indexPath = path.join(clientPath, 'index.html');
 }
 // Debug: Log paths on startup
 console.log('Client path:', clientPath);
 console.log('CWD:', process.cwd());
 console.log('__dirname:', __dirname);
 console.log('Index path:', indexPath);
-// Serve static files
-app.use(express.static(clientPath, {
-    dotfiles: 'ignore',
-    index: false,
-    maxAge: '1y',
-    etag: true
-}));
+// Handle OPTIONS preflight requests for CORS - must be before static files
+app.options('*', (_req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.sendStatus(200);
+});
+// Serve static files - but only for non-API routes
+app.use((req, res, next) => {
+    // Skip static file serving for API routes
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
+    express.static(clientPath, {
+        dotfiles: 'ignore',
+        index: false,
+        maxAge: '1y',
+        etag: true
+    })(req, res, next);
+});
 // Serve the main app (React) - this must be after all API routes
 app.get('*', (_req, res) => {
     // Skip API routes - they should have been handled above

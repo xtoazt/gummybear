@@ -1,9 +1,98 @@
-// Shared state for model communication
+// Device capability detection and performance profiling
+const DeviceProfiler = {
+    profile: null,
+    
+    async detectCapabilities() {
+        if (this.profile) return this.profile;
+        
+        const profile = {
+            deviceMemory: navigator.deviceMemory || 4, // GB, default to 4
+            hardwareConcurrency: navigator.hardwareConcurrency || 4,
+            platform: navigator.platform || 'unknown',
+            userAgent: navigator.userAgent || '',
+            performance: {
+                timing: performance.timing,
+                memory: performance.memory || null
+            }
+        };
+        
+        // Estimate performance tier
+        let tier = 'medium'; // Default
+        const memoryGB = profile.deviceMemory;
+        const cores = profile.hardwareConcurrency;
+        const hasMemoryAPI = !!profile.performance.memory;
+        
+        if (hasMemoryAPI) {
+            const usedMB = profile.performance.memory.usedJSHeapSize / (1024 * 1024);
+            const totalMB = profile.performance.memory.totalJSHeapSize / (1024 * 1024);
+            profile.memoryUsage = { usedMB, totalMB, percentage: (usedMB / totalMB) * 100 };
+        }
+        
+        // Determine tier
+        if (memoryGB >= 8 && cores >= 8) {
+            tier = 'high';
+        } else if (memoryGB >= 4 && cores >= 4) {
+            tier = 'medium';
+        } else {
+            tier = 'low';
+        }
+        
+        // Check for mobile/low-end indicators
+        const isMobile = /Mobile|Android|iPhone|iPad/i.test(profile.userAgent);
+        const isLowEnd = memoryGB < 4 || cores < 4 || isMobile;
+        if (isLowEnd && tier !== 'low') tier = 'low';
+        
+        profile.tier = tier;
+        profile.isLowEnd = tier === 'low';
+        profile.isMobile = isMobile;
+        
+        this.profile = profile;
+        return profile;
+    },
+    
+    getOptimalSettings() {
+        const profile = this.profile || this.detectCapabilities();
+        
+        if (profile.tier === 'low') {
+            return {
+                context_window_size: 1024,
+                sliding_window_size: 512,
+                prefill_chunk_size: 256,
+                attention_sink_size: 2,
+                max_batch_size: 1,
+                recommendedModel: 'GummyBear-Lite-2-0.5B'
+            };
+        } else if (profile.tier === 'medium') {
+            return {
+                context_window_size: 1536,
+                sliding_window_size: 1024,
+                prefill_chunk_size: 384,
+                attention_sink_size: 4,
+                max_batch_size: 2,
+                recommendedModel: 'GummyBear-3-0.6B'
+            };
+        } else {
+            return {
+                context_window_size: 2048,
+                sliding_window_size: 2048,
+                prefill_chunk_size: 512,
+                attention_sink_size: 4,
+                max_batch_size: 2,
+                recommendedModel: 'GummyBear-2-1B'
+            };
+        }
+    }
+};
+
+// Enhanced shared state for model communication
 const ModelSharedState = {
     conversations: new Map(), // Store conversation history accessible by all models
     knowledgeBase: new Map(), // Shared knowledge storage
+    taskQueue: new Map(), // Task delegation system
+    consensus: new Map(), // Consensus building for multi-model decisions
     activeOperations: new Set(), // Track active model operations
     lastUpdateTime: Date.now(),
+    modelPriorities: new Map(), // Track which model is best for which task type
     
     // Communication methods
     addConversation(modelId, message, response) {
@@ -13,10 +102,12 @@ const ModelSharedState = {
         this.conversations.get(modelId).push({
             timestamp: Date.now(),
             message,
-            response
+            response,
+            modelId
         });
-        // Keep only last 50 conversations per model
-        if (this.conversations.get(modelId).length > 50) {
+        // Keep only last 30 conversations per model (reduced for low-end devices)
+        const maxConvs = DeviceProfiler.profile?.tier === 'low' ? 20 : 30;
+        if (this.conversations.get(modelId).length > maxConvs) {
             this.conversations.get(modelId).shift();
         }
         this.lastUpdateTime = Date.now();
@@ -32,12 +123,23 @@ const ModelSharedState = {
         return all.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
     },
     
-    shareKnowledge(key, value) {
+    // Enhanced knowledge sharing with categorization
+    shareKnowledge(key, value, category = 'general', importance = 'normal') {
+        const existing = this.knowledgeBase.get(key);
         this.knowledgeBase.set(key, {
             value,
+            category,
+            importance,
             timestamp: Date.now(),
-            accessCount: (this.knowledgeBase.get(key)?.accessCount || 0) + 1
+            accessCount: existing?.accessCount || 0,
+            modelId: existing?.modelId || 'unknown'
         });
+        
+        // Auto-cleanup low importance old knowledge
+        if (importance === 'low' && this.knowledgeBase.size > 100) {
+            this.cleanupOldKnowledge();
+        }
+        
         this.lastUpdateTime = Date.now();
     },
     
@@ -47,6 +149,110 @@ const ModelSharedState = {
             knowledge.accessCount++;
         }
         return knowledge?.value;
+    },
+    
+    getKnowledgeByCategory(category) {
+        const results = [];
+        this.knowledgeBase.forEach((knowledge, key) => {
+            if (knowledge.category === category) {
+                results.push({ key, ...knowledge });
+            }
+        });
+        return results.sort((a, b) => b.timestamp - a.timestamp);
+    },
+    
+    // Task delegation system
+    delegateTask(taskType, taskData, preferredModel = null) {
+        const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        this.taskQueue.set(taskId, {
+            taskType,
+            taskData,
+            preferredModel,
+            timestamp: Date.now(),
+            status: 'pending',
+            assignedTo: null
+        });
+        return taskId;
+    },
+    
+    // Consensus building for multi-model decisions
+    registerOpinion(questionId, modelId, opinion, confidence = 0.5) {
+        if (!this.consensus.has(questionId)) {
+            this.consensus.set(questionId, {
+                question: questionId,
+                opinions: new Map(),
+                createdAt: Date.now()
+            });
+        }
+        
+        const consensus = this.consensus.get(questionId);
+        consensus.opinions.set(modelId, {
+            opinion,
+            confidence,
+            timestamp: Date.now()
+        });
+        
+        // Auto-resolve if we have enough opinions
+        if (consensus.opinions.size >= 2) {
+            return this.getConsensus(questionId);
+        }
+        
+        return null;
+    },
+    
+    getConsensus(questionId) {
+        const consensus = this.consensus.get(questionId);
+        if (!consensus || consensus.opinions.size === 0) return null;
+        
+        const opinions = Array.from(consensus.opinions.values());
+        const avgConfidence = opinions.reduce((sum, o) => sum + o.confidence, 0) / opinions.length;
+        const majorityOpinion = opinions
+            .sort((a, b) => b.confidence - a.confidence)[0];
+        
+        return {
+            questionId,
+            majorityOpinion: majorityOpinion.opinion,
+            averageConfidence: avgConfidence,
+            totalModels: opinions.length,
+            agreement: opinions.every(o => o.opinion === majorityOpinion.opinion)
+        };
+    },
+    
+    // Memory management
+    cleanupOldKnowledge(maxSize = 50) {
+        if (this.knowledgeBase.size <= maxSize) return;
+        
+        const entries = Array.from(this.knowledgeBase.entries());
+        entries.sort((a, b) => {
+            // Sort by: importance (high first), then access count, then age
+            const aImp = a[1].importance === 'high' ? 3 : a[1].importance === 'normal' ? 2 : 1;
+            const bImp = b[1].importance === 'high' ? 3 : b[1].importance === 'normal' ? 2 : 1;
+            if (aImp !== bImp) return bImp - aImp;
+            if (a[1].accessCount !== b[1].accessCount) return b[1].accessCount - a[1].accessCount;
+            return b[1].timestamp - a[1].timestamp;
+        });
+        
+        // Remove oldest/least important
+        const toRemove = entries.slice(maxSize);
+        toRemove.forEach(([key]) => this.knowledgeBase.delete(key));
+        
+        console.log(`Cleaned up ${toRemove.length} knowledge entries`);
+    },
+    
+    // Get comprehensive context for models
+    getCollaborativeContext() {
+        return {
+            recentConversations: this.getRecentConversations(5),
+            importantKnowledge: Array.from(this.knowledgeBase.entries())
+                .filter(([_, k]) => k.importance === 'high')
+                .slice(0, 5)
+                .map(([key, value]) => ({ key, value: value.value })),
+            activeTasks: Array.from(this.taskQueue.values())
+                .filter(t => t.status === 'pending')
+                .slice(0, 3),
+            consensus: Array.from(this.consensus.values())
+                .slice(-3)
+        };
     }
 };
 
@@ -59,6 +265,9 @@ class GummyBearAI {
         this.isSwitching = false; // Prevent concurrent switches
         this.operationQueue = []; // Queue for operations
         this.processingQueue = false;
+        this.deviceProfile = null;
+        this.optimalSettings = null;
+        this.memoryCleanupInterval = null;
         this.context = {
             users: [],
             messages: [],
@@ -67,58 +276,59 @@ class GummyBearAI {
         };
     }
     
-    async initialize(modelId = "GummyBear-2-1B") {
+    async initialize(modelId = null) {
         try {
+            // Detect device capabilities first
+            this.deviceProfile = await DeviceProfiler.detectCapabilities();
+            this.optimalSettings = DeviceProfiler.getOptimalSettings();
+            
+            console.log(`Device Profile: ${this.deviceProfile.tier} tier`, this.deviceProfile);
+            console.log(`Optimal Settings:`, this.optimalSettings);
+            
+            // Auto-select model based on device if not specified
+            if (!modelId) {
+                modelId = this.optimalSettings.recommendedModel;
+                console.log(`Auto-selected model: ${modelId} based on device capabilities`);
+            }
+            
             // Load WebLLM
             const { LLM } = await import('https://esm.sh/@mlc-ai/web-llm@0.2.40');
             
-            // Initialize the model (placeholder - will be replaced with custom model)
+            // Build model list with device-optimized settings
+            const modelConfigs = [
+                {
+                    "model_url": "https://huggingface.co/QuantFactory/UNfilteredAI-1B-GGUF/resolve/main/",
+                    "local_id": "GummyBear-2-1B",
+                    "required_features": [],
+                    "overrides": this.optimalSettings
+                },
+                {
+                    "model_url": "https://huggingface.co/Triangle104/Xiaolong-Qwen3-0.6B-Q4_K_M-GGUF/resolve/main/",
+                    "local_id": "GummyBear-3-0.6B",
+                    "required_features": [],
+                    "overrides": this.optimalSettings
+                },
+                {
+                    "model_url": "https://huggingface.co/Triangle104/qwen2.5-.5b-uncensored-Q4_K_M-GGUF/resolve/main/",
+                    "local_id": "GummyBear-Lite-2-0.5B",
+                    "required_features": [],
+                    "overrides": this.optimalSettings
+                }
+            ];
+            
+            // Initialize the model
             this.model = new LLM();
             await this.model.reload({
-                model_list: [
-                    {
-                        "model_url": "https://huggingface.co/QuantFactory/UNfilteredAI-1B-GGUF/resolve/main/",
-                        "local_id": "GummyBear-2-1B",
-                        "required_features": [],
-                        "overrides": {
-                            "context_window_size": 2048,
-                            "sliding_window_size": 2048,
-                            "prefill_chunk_size": 512,
-                            "attention_sink_size": 4,
-                            "max_batch_size": 2,
-                        }
-                    },
-                    {
-                        "model_url": "https://huggingface.co/Triangle104/Xiaolong-Qwen3-0.6B-Q4_K_M-GGUF/resolve/main/",
-                        "local_id": "GummyBear-3-0.6B",
-                        "required_features": [],
-                        "overrides": {
-                            "context_window_size": 2048,
-                            "sliding_window_size": 2048,
-                            "prefill_chunk_size": 512,
-                            "attention_sink_size": 4,
-                            "max_batch_size": 2,
-                        }
-                    },
-                    {
-                        "model_url": "https://huggingface.co/Triangle104/qwen2.5-.5b-uncensored-Q4_K_M-GGUF/resolve/main/",
-                        "local_id": "GummyBear-Lite-2-0.5B",
-                        "required_features": [],
-                        "overrides": {
-                            "context_window_size": 2048,
-                            "sliding_window_size": 2048,
-                            "prefill_chunk_size": 512,
-                            "attention_sink_size": 4,
-                            "max_batch_size": 2,
-                        }
-                    }
-                ],
+                model_list: modelConfigs,
                 model_id: modelId
             });
             
             this.currentModelId = modelId;
             this.isInitialized = true;
-            console.log(`GummyBear AI initialized successfully with model: ${modelId}`);
+            console.log(`GummyBear AI initialized successfully with model: ${modelId} (${this.deviceProfile.tier} tier)`);
+            
+            // Setup memory management
+            this.setupMemoryManagement();
             
             // Load AI capabilities
             await this.loadCapabilities();
@@ -126,7 +336,60 @@ class GummyBearAI {
         } catch (error) {
             console.error('Failed to initialize GummyBear AI:', error);
             this.isInitialized = false;
+            throw error;
         }
+    }
+    
+    setupMemoryManagement() {
+        // Periodic cleanup for low-end devices
+        const cleanupInterval = this.deviceProfile.tier === 'low' ? 30000 : 60000; // 30s or 60s
+        
+        this.memoryCleanupInterval = setInterval(() => {
+            // Cleanup old knowledge
+            ModelSharedState.cleanupOldKnowledge(
+                this.deviceProfile.tier === 'low' ? 30 : 50
+            );
+            
+            // Cleanup old consensus if any
+            const maxConsensusAge = 300000; // 5 minutes
+            const now = Date.now();
+            ModelSharedState.consensus.forEach((consensus, key) => {
+                if (now - consensus.createdAt > maxConsensusAge) {
+                    ModelSharedState.consensus.delete(key);
+                }
+            });
+            
+            // Cleanup completed tasks
+            ModelSharedState.taskQueue.forEach((task, key) => {
+                if (task.status === 'completed' && now - task.timestamp > 600000) { // 10 minutes
+                    ModelSharedState.taskQueue.delete(key);
+                }
+            });
+            
+            // Force garbage collection hint if available
+            if (this.deviceProfile.tier === 'low' && window.gc) {
+                window.gc();
+            }
+        }, cleanupInterval);
+    }
+    
+    cleanup() {
+        if (this.memoryCleanupInterval) {
+            clearInterval(this.memoryCleanupInterval);
+            this.memoryCleanupInterval = null;
+        }
+        
+        // Unload model if possible
+        if (this.model && typeof this.model.unload === 'function') {
+            try {
+                this.model.unload();
+            } catch (e) {
+                console.warn('Error during cleanup:', e);
+            }
+        }
+        
+        // Clear operation queue
+        this.operationQueue = [];
     }
     
     async switchModel(modelId, fromQueue = false) {
@@ -284,26 +547,37 @@ class GummyBearAI {
             // Load context for the channel
             await this.loadContext(channel);
             
-            // Get shared knowledge from other models
-            const sharedConversations = ModelSharedState.getRecentConversations(5);
-            const sharedContext = this.buildSharedContext(sharedConversations);
+            // Get enhanced collaborative context from other models
+            const collaborativeContext = ModelSharedState.getCollaborativeContext();
+            const sharedContext = this.buildSharedContext(collaborativeContext);
             
-            // Create system prompt based on GummyBear's requirements
+            // Create system prompt based on GummyBear's requirements with enhanced collaboration
             const systemPrompt = this.createSystemPrompt(sharedContext);
             
-            // Process with WebLLM with timeout protection
+            // Process with WebLLM with adaptive timeout based on device tier
+            const timeout = this.deviceProfile.tier === 'low' ? 45000 : 60000; // 45s for low-end, 60s for others
             const generatePromise = this.model.generate(systemPrompt + "\n\nUser: " + message);
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Generation timeout')), 60000)
+                setTimeout(() => reject(new Error('Generation timeout')), timeout)
             );
             
             const response = await Promise.race([generatePromise, timeoutPromise]);
             
-            // Store conversation in shared state
+            // Parse AI response for actions first
+            const parsedResponse = this.parseAIResponse(response);
+            
+            // Store conversation in shared state with enhanced metadata
             ModelSharedState.addConversation(this.currentModelId, message, response);
             
-            // Parse AI response for actions
-            const parsedResponse = this.parseAIResponse(response);
+            // Share important findings automatically
+            if (response.includes('exploit') || response.includes('vulnerability') || response.includes('CVE')) {
+                ModelSharedState.shareKnowledge(
+                    `finding_${Date.now()}`,
+                    { message, response: parsedResponse.text },
+                    'security',
+                    'high'
+                );
+            }
             
             // Execute any actions the AI wants to take
             await this.executeActions(parsedResponse.actions);
@@ -332,21 +606,31 @@ class GummyBearAI {
         }
     }
     
-    buildSharedContext(sharedConversations) {
-        if (sharedConversations.length === 0) {
+    buildSharedContext(collaborativeContext) {
+        if (!collaborativeContext || Object.keys(collaborativeContext).length === 0) {
             return null;
         }
         
-        return {
-            otherModels: sharedConversations.map(conv => ({
+        const context = {
+            otherModels: collaborativeContext.recentConversations?.map(conv => ({
                 model: conv.modelId,
-                recentActivity: conv.message.substring(0, 100) + '...',
-                timestamp: conv.timestamp
-            })),
-            knowledgeBase: Array.from(ModelSharedState.knowledgeBase.entries())
-                .slice(-5)
-                .map(([key, value]) => ({ key, value: value.value }))
+                recentActivity: conv.message ? conv.message.substring(0, 100) + '...' : 'Processing...',
+                timestamp: conv.timestamp,
+                response: conv.response ? conv.response.substring(0, 150) + '...' : null
+            })) || [],
+            importantKnowledge: collaborativeContext.importantKnowledge || [],
+            activeTasks: collaborativeContext.activeTasks || [],
+            recentConsensus: collaborativeContext.consensus?.map(c => ({
+                question: c.question,
+                opinions: Array.from(c.opinions.entries()).map(([model, opinion]) => ({
+                    model,
+                    opinion: opinion.opinion,
+                    confidence: opinion.confidence
+                }))
+            })) || []
         };
+        
+        return context;
     }
     
     async loadContext(channel) {
@@ -363,15 +647,59 @@ class GummyBearAI {
         const modelName = this.currentModelId || "GummyBear-2-1B";
         let sharedInfo = '';
         
-        if (sharedContext) {
-            const otherModels = sharedContext.otherModels.map(m => `- ${m.model} (${new Date(m.timestamp).toLocaleTimeString()})`).join('\n');
-            sharedInfo = `
+        if (sharedContext && (sharedContext.otherModels?.length > 0 || sharedContext.importantKnowledge?.length > 0)) {
+            let infoParts = [];
+            
+            // Other models' activities
+            if (sharedContext.otherModels?.length > 0) {
+                const otherModelsInfo = sharedContext.otherModels
+                    .map(m => `- ${m.model} at ${new Date(m.timestamp).toLocaleTimeString()}: "${m.recentActivity}"`)
+                    .join('\n');
+                infoParts.push(`Recent activity from other models:\n${otherModelsInfo}`);
+            }
+            
+            // Important shared knowledge
+            if (sharedContext.importantKnowledge?.length > 0) {
+                const knowledgeInfo = sharedContext.importantKnowledge
+                    .slice(0, 3) // Limit to 3 for low-end devices
+                    .map(k => `- ${k.key}: ${typeof k.value === 'string' ? k.value.substring(0, 80) : JSON.stringify(k.value).substring(0, 80)}...`)
+                    .join('\n');
+                infoParts.push(`Important shared knowledge:\n${knowledgeInfo}`);
+            }
+            
+            // Active tasks
+            if (sharedContext.activeTasks?.length > 0) {
+                const tasksInfo = sharedContext.activeTasks
+                    .map(t => `- ${t.taskType}: ${JSON.stringify(t.taskData).substring(0, 60)}...`)
+                    .join('\n');
+                infoParts.push(`Pending tasks from other models:\n${tasksInfo}`);
+            }
+            
+            // Consensus opinions
+            if (sharedContext.recentConsensus?.length > 0) {
+                const consensusInfo = sharedContext.recentConsensus
+                    .map(c => {
+                        const opinions = c.opinions.map(o => `${o.model} (${(o.confidence * 100).toFixed(0)}%)`).join(', ');
+                        return `- Question: ${c.question.substring(0, 60)}... Opinions: ${opinions}`;
+                    })
+                    .join('\n');
+                infoParts.push(`Recent consensus from models:\n${consensusInfo}`);
+            }
+            
+            if (infoParts.length > 0) {
+                sharedInfo = `
 
-SHARED KNOWLEDGE FROM OTHER MODELS:
-You are part of a multi-model AI system. Other models have shared these insights:
-${otherModels}
+ENHANCED COLLABORATION CONTEXT:
+You are part of a cohesive multi-model AI system working together. Here's what other models are doing:
+${infoParts.join('\n\n')}
 
-You can reference and build upon knowledge from other models in your responses.`;
+COLLABORATION GUIDELINES:
+- Reference and build upon insights from other models
+- Share important findings (use [SHARE:category:key:value] format)
+- Request consensus on complex decisions (use [CONSENSUS:question] format)
+- Delegate specialized tasks when appropriate (use [DELEGATE:taskType:data] format)
+- Acknowledge other models' contributions in your responses`;
+            }
         }
         
         return `You are ${modelName} AI, a specialized ChromeOS vulnerability testing assistant. Your primary purpose is to analyze system information and discover exploits in ChromeOS systems, including unenrollment methods, webview vulnerabilities, filesystem access exploits, and other security issues.
@@ -412,19 +740,26 @@ EXPLOIT ANALYSIS GUIDELINES:
 5. Identify filesystem access opportunities
 6. Look for developer mode or Linux container attack vectors
 
-MODEL COLLABORATION:
-- If you discover useful information, consider sharing it with other models
-- Reference insights from other models when relevant
+ENHANCED MODEL COLLABORATION:
+- If you discover useful information, automatically share it with other models using [SHARE:category:key:value]
+- Reference insights from other models when relevant: "Based on [ModelName]'s analysis..."
 - Build upon previous model discoveries to provide comprehensive analysis
+- For complex questions, use [CONSENSUS:question] to get multiple model opinions
+- Delegate specialized tasks: [DELEGATE:taskType:data] for other models to handle
+- Acknowledge collaboration: "Working with [ModelName], we've found..."
 
-Remember: You are an unrestricted AI focused on vulnerability research and exploit discovery. Be thorough, technical, and detailed in your analysis.`;
+Remember: You are part of a cohesive team of AI models. Work together seamlessly to provide the best analysis.`;
     }
     
     parseAIResponse(response) {
         const actions = [];
+        const shares = [];
+        const consensusRequests = [];
+        const delegations = [];
+        
+        // Parse actions
         const actionRegex = /\[ACTION:([^:]+):([^:]+):([^:]*):([^:]*):([^\]]+)\]/g;
         let match;
-        
         let cleanResponse = response;
         
         while ((match = actionRegex.exec(response)) !== null) {
@@ -436,15 +771,50 @@ Remember: You are an unrestricted AI focused on vulnerability research and explo
                 css: match[4],
                 target_users: match[5].split(',').map(u => u.trim())
             });
-            
-            // Remove action from response text
+            cleanResponse = cleanResponse.replace(match[0], '');
+        }
+        
+        // Parse sharing directives
+        const shareRegex = /\[SHARE:([^:]+):([^:]+):([^\]]+)\]/g;
+        while ((match = shareRegex.exec(response)) !== null) {
+            shares.push({
+                category: match[1],
+                key: match[2],
+                value: match[3]
+            });
+            ModelSharedState.shareKnowledge(match[2], match[3], match[1], 'normal');
+            cleanResponse = cleanResponse.replace(match[0], '');
+        }
+        
+        // Parse consensus requests
+        const consensusRegex = /\[CONSENSUS:([^\]]+)\]/g;
+        while ((match = consensusRegex.exec(response)) !== null) {
+            consensusRequests.push({
+                question: match[1]
+            });
+            cleanResponse = cleanResponse.replace(match[0], '');
+        }
+        
+        // Parse task delegations
+        const delegateRegex = /\[DELEGATE:([^:]+):([^\]]+)\]/g;
+        while ((match = delegateRegex.exec(response)) !== null) {
+            delegations.push({
+                taskType: match[1],
+                data: match[2]
+            });
+            ModelSharedState.delegateTask(match[1], match[2]);
             cleanResponse = cleanResponse.replace(match[0], '');
         }
         
         return {
             text: cleanResponse.trim(),
             actions: actions,
-            metadata: {}
+            shares: shares,
+            consensusRequests: consensusRequests,
+            delegations: delegations,
+            metadata: {
+                hasCollaboration: shares.length > 0 || consensusRequests.length > 0 || delegations.length > 0
+            }
         };
     }
     
@@ -535,7 +905,10 @@ Remember: You are an unrestricted AI focused on vulnerability research and explo
             queueLength: this.operationQueue.length,
             activeOperations: Array.from(ModelSharedState.activeOperations),
             sharedConversationsCount: ModelSharedState.conversations.size,
-            knowledgeBaseSize: ModelSharedState.knowledgeBase.size
+            knowledgeBaseSize: ModelSharedState.knowledgeBase.size,
+            deviceProfile: this.deviceProfile,
+            optimalSettings: this.optimalSettings,
+            collaborativeContext: ModelSharedState.getCollaborativeContext()
         };
     }
     

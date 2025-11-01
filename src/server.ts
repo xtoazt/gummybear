@@ -44,8 +44,15 @@ async function ensureDbInitialized() {
 }
 
 // Middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: false, // Allow inline scripts for theme
+}));
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Middleware to ensure database is initialized on first request
@@ -107,7 +114,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Authentication endpoint
+// Authentication endpoints
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -650,13 +657,27 @@ console.log('CWD:', process.cwd());
 console.log('__dirname:', __dirname);
 console.log('Index path:', indexPath);
 
-// Serve static files
-app.use(express.static(clientPath, { 
-  dotfiles: 'ignore',
-  index: false,
-  maxAge: '1y',
-  etag: true
-}));
+// Handle OPTIONS preflight requests for CORS - must be before static files
+app.options('*', (_req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.sendStatus(200);
+});
+
+// Serve static files - but only for non-API routes
+app.use((req, res, next) => {
+  // Skip static file serving for API routes
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  express.static(clientPath, { 
+    dotfiles: 'ignore',
+    index: false,
+    maxAge: '1y',
+    etag: true
+  })(req, res, next);
+});
 
 // Serve the main app (React) - this must be after all API routes
 app.get('*', (_req, res) => {

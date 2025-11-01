@@ -57,6 +57,27 @@ export class UserModel {
             return null;
         }
     }
+    async findByUsername(username) {
+        try {
+            const result = await this.db.query('SELECT * FROM users WHERE username = $1', [username]);
+            if (result.rows.length === 0) {
+                return null;
+            }
+            const user = result.rows[0];
+            return {
+                id: user.id,
+                username: user.username,
+                role: user.role,
+                status: user.status,
+                created_at: user.created_at,
+                last_seen: user.last_seen
+            };
+        }
+        catch (error) {
+            console.error('Find user by username error:', error);
+            return null;
+        }
+    }
     async create(username, password) {
         try {
             const hashedPassword = await bcrypt.hash(password, 10);

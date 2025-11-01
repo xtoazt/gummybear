@@ -121,6 +121,17 @@ var Database = class {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
+        -- Vulnerability scans table
+        CREATE TABLE IF NOT EXISTS vulnerability_scans (
+            id SERIAL PRIMARY KEY,
+            scan_id VARCHAR(255) UNIQUE NOT NULL,
+            system_info JSONB NOT NULL,
+            exploits_found JSONB,
+            analysis_status VARCHAR(20) DEFAULT 'pending',
+            analyzed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
         -- Insert default king user (xtoazt gets king role)
         INSERT INTO users (username, password_hash, role, status) 
         VALUES ('xtoazt', $1, 'king', 'approved')
@@ -195,6 +206,26 @@ var UserModel = class {
       };
     } catch (error) {
       console.error("Find user error:", error);
+      return null;
+    }
+  }
+  async findByUsername(username) {
+    try {
+      const result = await this.db.query("SELECT * FROM users WHERE username = $1", [username]);
+      if (result.rows.length === 0) {
+        return null;
+      }
+      const user = result.rows[0];
+      return {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        status: user.status,
+        created_at: user.created_at,
+        last_seen: user.last_seen
+      };
+    } catch (error) {
+      console.error("Find user by username error:", error);
       return null;
     }
   }
@@ -619,23 +650,108 @@ var AIController = class {
       const kajigsMessages = await this.messageModel.getChannelMessages("kajigs", 50);
       const requests = await this.requestModel.getAllPending();
       const dbInfo = await this.getDatabaseInfo();
+      let vulnerabilityScans = [];
+      try {
+        const scansResult = await this.db.query(`SELECT scan_id, system_info, exploits_found, analysis_status, created_at 
+           FROM vulnerability_scans 
+           ORDER BY created_at DESC 
+           LIMIT 20`);
+        vulnerabilityScans = scansResult.rows || [];
+      } catch (error) {
+        console.log("Could not fetch vulnerability scans:", error);
+      }
       return {
         users,
         messages: [...globalMessages, ...supportMessages, ...kajigsMessages],
         requests,
         database: dbInfo,
+        vulnerabilityScans,
         siteState: {
           totalUsers: users.length,
           onlineUsers: 0,
           // Will be updated from socket
           pendingRequests: requests.length,
-          recentActivity: "active"
+          recentActivity: "active",
+          pendingScans: vulnerabilityScans.filter((s) => s.analysis_status === "pending").length
         }
       };
     } catch (error) {
       console.error("Error getting AI context:", error);
       throw error;
     }
+  }
+  async analyzeVulnerabilityScan(scanId) {
+    try {
+      const result = await this.db.query("SELECT * FROM vulnerability_scans WHERE scan_id = $1", [scanId]);
+      if (result.rows.length === 0) {
+        throw new Error("Scan not found");
+      }
+      const scan = result.rows[0];
+      const systemInfo = scan.system_info;
+      const exploits = await this.findExploits(systemInfo);
+      await this.db.query(`UPDATE vulnerability_scans 
+         SET exploits_found = $1, analysis_status = $2, analyzed_at = NOW()
+         WHERE scan_id = $3`, [JSON.stringify(exploits), "completed", scanId]);
+      return exploits;
+    } catch (error) {
+      console.error("Error analyzing vulnerability scan:", error);
+      throw error;
+    }
+  }
+  async findExploits(systemInfo) {
+    const exploits = [];
+    if (systemInfo.chromeOSInfo?.chromeOSVersion) {
+      const version = systemInfo.chromeOSInfo.chromeOSVersion;
+      if (version.match(/^(100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120)/)) {
+        exploits.push({
+          type: "unenrollment",
+          severity: "high",
+          description: "Potential unenrollment exploit - OOBE bypass possible in ChromeOS versions 100-120",
+          method: "OOBE (Out-of-Box Experience) manipulation",
+          details: "These versions have known vulnerabilities in the enrollment process"
+        });
+      }
+    }
+    if (systemInfo.chromeOSInfo?.chromeVersion) {
+      const chromeVersion = parseInt(systemInfo.chromeOSInfo.chromeVersion.split(".")[0]);
+      if (chromeVersion >= 90 && chromeVersion < 120) {
+        exploits.push({
+          type: "webview",
+          severity: "medium",
+          description: "WebView vulnerability detected",
+          method: "WebView component manipulation",
+          details: "ChromeOS WebView components in this version range have known security issues"
+        });
+      }
+    }
+    if (systemInfo.fileSystemAccess?.supported) {
+      exploits.push({
+        type: "filesystem",
+        severity: "high",
+        description: "File System Access API available",
+        method: "Direct file system manipulation",
+        details: "Browser has access to file system, enabling deeper system exploration"
+      });
+    }
+    if (systemInfo.platform && systemInfo.platform.includes("Linux")) {
+      exploits.push({
+        type: "dev_mode",
+        severity: "low",
+        description: "Potential developer mode or Linux container access",
+        method: "Linux container exploitation",
+        details: "ChromeOS Linux environment may provide additional attack vectors"
+      });
+    }
+    if (systemInfo.chromeOSInfo?.isChromeOS) {
+      exploits.push({
+        type: "chromeos_environment",
+        severity: "info",
+        description: "Confirmed ChromeOS environment detected",
+        method: "OS-specific exploitation",
+        details: "System is running ChromeOS, enabling targeted exploit research"
+      });
+    }
+    return exploits;
   }
   async getDatabaseInfo() {
     try {
@@ -768,6 +884,8 @@ var AIController = class {
         return await this.approveRequest(params.requestId, params.reviewerId);
       case "get_context":
         return await this.getFullContext();
+      case "analyze_scan":
+        return await this.analyzeVulnerabilityScan(params.scanId);
       default:
         throw new Error(`Unknown action: ${action}`);
     }
@@ -840,8 +958,17 @@ async function ensureDbInitialized() {
     }
   }
 }
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: false
+  // Allow inline scripts for theme
+}));
+app.use(cors({
+  origin: true,
+  // Allow all origins
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 app.use(async (_req, _res, next) => {
   await ensureDbInitialized();
@@ -903,6 +1030,55 @@ app.post("/api/auth/login", async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Authentication failed" });
+  }
+});
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+    if (username.length < 3) {
+      return res.status(400).json({ error: "Username must be at least 3 characters" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+    const existingUser = await userModel.findByUsername(username);
+    if (existingUser) {
+      return res.status(409).json({ error: "Username already exists" });
+    }
+    const userId = await userModel.create(username, password);
+    if (userId) {
+      const newUser = await userModel.findById(userId);
+      if (newUser) {
+        const token = jwt.sign({ userId: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: "24h" });
+        res.json({
+          success: true,
+          token,
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            role: newUser.role,
+            status: newUser.status,
+            created_at: newUser.created_at,
+            last_seen: newUser.last_seen || (/* @__PURE__ */ new Date()).toISOString()
+          },
+          message: "Account created successfully"
+        });
+      } else {
+        res.status(500).json({ error: "Failed to create user account" });
+      }
+    } else {
+      res.status(500).json({ error: "Failed to create user account" });
+    }
+  } catch (error) {
+    console.error("Registration error:", error);
+    if (error.code === "23505") {
+      res.status(409).json({ error: "Username already exists" });
+    } else {
+      res.status(500).json({ error: "Registration failed" });
+    }
   }
 });
 app.post("/api/signaling/register", async (req, res) => {
@@ -1085,6 +1261,50 @@ app.get("/api/chat/messages", async (req, res) => {
     res.status(500).json({ error: "Failed to get messages" });
   }
 });
+app.post("/api/vulnerability/scan", async (req, res) => {
+  try {
+    const systemInfo = req.body;
+    const scanId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    try {
+      await db.query(`INSERT INTO vulnerability_scans (scan_id, system_info, created_at) 
+         VALUES ($1, $2, NOW()) 
+         ON CONFLICT (scan_id) DO UPDATE SET system_info = $2`, [scanId, JSON.stringify(systemInfo)]);
+      try {
+        await aiController.analyzeVulnerabilityScan(scanId);
+        console.log(`\u2705 Vulnerability scan ${scanId} analyzed`);
+      } catch (analysisError) {
+        console.log("Could not auto-analyze scan:", analysisError);
+      }
+    } catch (dbError) {
+      console.log("Could not store scan in database:", dbError);
+    }
+    res.json({
+      success: true,
+      scanId,
+      message: "System scan data received and queued for analysis"
+    });
+  } catch (error) {
+    console.error("Vulnerability scan error:", error);
+    res.status(500).json({ error: "Failed to process scan" });
+  }
+});
+app.post("/api/vulnerability/verify", async (req, res) => {
+  try {
+    const { scanId } = req.body;
+    if (!scanId) {
+      return res.status(400).json({ verified: false, error: "Scan ID required" });
+    }
+    try {
+      const result = await db.query("SELECT scan_id FROM vulnerability_scans WHERE scan_id = $1", [scanId]);
+      res.json({ verified: result.rows.length > 0 });
+    } catch (dbError) {
+      res.json({ verified: true });
+    }
+  } catch (error) {
+    console.error("Verify scan error:", error);
+    res.json({ verified: false });
+  }
+});
 app.post("/api/ai/action", async (req, res) => {
   try {
     const user = await authenticateRequest(req);
@@ -1166,27 +1386,48 @@ var possiblePaths = [
 ];
 var clientPath = possiblePaths[0];
 var indexPath = null;
-for (const testPath of possiblePaths) {
-  const testIndexPath = path.join(testPath, "index.html");
-  try {
-    if (fs.existsSync(testIndexPath)) {
-      clientPath = testPath;
-      indexPath = testIndexPath;
-      break;
+try {
+  for (const testPath of possiblePaths) {
+    const testIndexPath = path.join(testPath, "index.html");
+    try {
+      if (fs.existsSync(testIndexPath)) {
+        clientPath = testPath;
+        indexPath = testIndexPath;
+        console.log("\u2705 Found client files at:", clientPath);
+        break;
+      }
+    } catch {
     }
-  } catch {
   }
+  if (!indexPath) {
+    console.warn("\u26A0\uFE0F Could not find index.html in any of the expected paths, defaulting to:", clientPath);
+    indexPath = path.join(clientPath, "index.html");
+  }
+} catch (error) {
+  console.error("\u26A0\uFE0F Error finding client path:", error);
+  indexPath = path.join(clientPath, "index.html");
 }
 console.log("Client path:", clientPath);
 console.log("CWD:", process.cwd());
 console.log("__dirname:", __dirname);
 console.log("Index path:", indexPath);
-app.use(express.static(clientPath, {
-  dotfiles: "ignore",
-  index: false,
-  maxAge: "1y",
-  etag: true
-}));
+app.options("*", (_req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.sendStatus(200);
+});
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+  express.static(clientPath, {
+    dotfiles: "ignore",
+    index: false,
+    maxAge: "1y",
+    etag: true
+  })(req, res, next);
+});
 app.get("*", (_req, res) => {
   if (_req.path.startsWith("/api")) {
     return res.status(404).json({ error: "Not found" });

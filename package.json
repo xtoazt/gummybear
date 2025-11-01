@@ -16,6 +16,7 @@
     "start": "node dist/server.js"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.16",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",

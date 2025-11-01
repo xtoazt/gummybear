@@ -112,6 +112,45 @@ class Database {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
+        -- AI Conversations table - stores important AI conversations for cross-session access
+        CREATE TABLE IF NOT EXISTS ai_conversations (
+            id SERIAL PRIMARY KEY,
+            model_id VARCHAR(100) NOT NULL,
+            channel VARCHAR(50) DEFAULT 'global',
+            user_message TEXT NOT NULL,
+            ai_response TEXT NOT NULL,
+            summary TEXT,
+            importance VARCHAR(20) DEFAULT 'normal',
+            category VARCHAR(50),
+            tags TEXT[],
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_model ON ai_conversations(model_id);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_channel ON ai_conversations(channel);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_importance ON ai_conversations(importance);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_category ON ai_conversations(category);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_created ON ai_conversations(created_at DESC);
+        
+        -- AI Knowledge Base table - stores shared knowledge across all models and users
+        CREATE TABLE IF NOT EXISTS ai_knowledge (
+            id SERIAL PRIMARY KEY,
+            key VARCHAR(255) UNIQUE NOT NULL,
+            value TEXT NOT NULL,
+            category VARCHAR(50) DEFAULT 'general',
+            importance VARCHAR(20) DEFAULT 'normal',
+            model_id VARCHAR(100),
+            access_count INTEGER DEFAULT 0,
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_key ON ai_knowledge(key);
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_category ON ai_knowledge(category);
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_importance ON ai_knowledge(importance);
+        
         -- Insert default king user (xtoazt gets king role)
         INSERT INTO users (username, password_hash, role, status) 
         VALUES ('xtoazt', $1, 'king', 'approved')

@@ -94,8 +94,9 @@ const ModelSharedState = {
     lastUpdateTime: Date.now(),
     modelPriorities: new Map(), // Track which model is best for which task type
     
-    // Communication methods
-    addConversation(modelId, message, response) {
+    // Communication methods - stores in memory for current session, database for persistence
+    async addConversation(modelId, message, response, channel = 'global', importance = 'normal') {
+        // Store in memory for current session (keep all for current chat)
         if (!this.conversations.has(modelId)) {
             this.conversations.set(modelId, []);
         }
@@ -103,13 +104,39 @@ const ModelSharedState = {
             timestamp: Date.now(),
             message,
             response,
-            modelId
+            modelId,
+            channel
         });
-        // Keep only last 30 conversations per model (reduced for low-end devices)
-        const maxConvs = DeviceProfiler.profile?.tier === 'low' ? 20 : 30;
-        if (this.conversations.get(modelId).length > maxConvs) {
-            this.conversations.get(modelId).shift();
+        
+        // Determine if this should be stored in database (important conversations)
+        const shouldStore = importance === 'high' || 
+                           message.includes('exploit') || 
+                           message.includes('vulnerability') || 
+                           message.includes('CVE') ||
+                           response.includes('exploit') ||
+                           response.includes('vulnerability') ||
+                           response.length > 500; // Long responses are usually important
+        
+        if (shouldStore) {
+            // Create summary for database storage
+            const summary = response.length > 200 ? response.substring(0, 200) + '...' : response;
+            const tags = [];
+            if (message.includes('exploit') || response.includes('exploit')) tags.push('exploit');
+            if (message.includes('vulnerability') || response.includes('vulnerability')) tags.push('vulnerability');
+            if (message.includes('CVE') || response.includes('CVE')) tags.push('CVE');
+            
+            await this.storeConversationToDB(
+                modelId,
+                channel,
+                message,
+                response,
+                summary,
+                importance,
+                'security', // Category
+                tags
+            );
         }
+        
         this.lastUpdateTime = Date.now();
     },
     
@@ -123,8 +150,9 @@ const ModelSharedState = {
         return all.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
     },
     
-    // Enhanced knowledge sharing with categorization
-    shareKnowledge(key, value, category = 'general', importance = 'normal') {
+    // Enhanced knowledge sharing with database storage
+    async shareKnowledge(key, value, category = 'general', importance = 'normal', modelId = null) {
+        // Store in memory for immediate access
         const existing = this.knowledgeBase.get(key);
         this.knowledgeBase.set(key, {
             value,
@@ -132,13 +160,11 @@ const ModelSharedState = {
             importance,
             timestamp: Date.now(),
             accessCount: existing?.accessCount || 0,
-            modelId: existing?.modelId || 'unknown'
+            modelId: modelId || existing?.modelId || 'unknown'
         });
         
-        // Auto-cleanup low importance old knowledge
-        if (importance === 'low' && this.knowledgeBase.size > 100) {
-            this.cleanupOldKnowledge();
-        }
+        // Store to database for persistence
+        await this.storeKnowledgeToDB(key, value, category, importance, modelId);
         
         this.lastUpdateTime = Date.now();
     },
@@ -218,35 +244,128 @@ const ModelSharedState = {
         };
     },
     
-    // Memory management
-    cleanupOldKnowledge(maxSize = 50) {
-        if (this.knowledgeBase.size <= maxSize) return;
-        
-        const entries = Array.from(this.knowledgeBase.entries());
-        entries.sort((a, b) => {
-            // Sort by: importance (high first), then access count, then age
-            const aImp = a[1].importance === 'high' ? 3 : a[1].importance === 'normal' ? 2 : 1;
-            const bImp = b[1].importance === 'high' ? 3 : b[1].importance === 'normal' ? 2 : 1;
-            if (aImp !== bImp) return bImp - aImp;
-            if (a[1].accessCount !== b[1].accessCount) return b[1].accessCount - a[1].accessCount;
-            return b[1].timestamp - a[1].timestamp;
-        });
-        
-        // Remove oldest/least important
-        const toRemove = entries.slice(maxSize);
-        toRemove.forEach(([key]) => this.knowledgeBase.delete(key));
-        
-        console.log(`Cleaned up ${toRemove.length} knowledge entries`);
+    // Store knowledge to database (no cleanup - persistent storage)
+    async storeKnowledgeToDB(key, value, category = 'general', importance = 'normal', modelId = null) {
+        try {
+            const response = await fetch('/api/ai/knowledge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    key,
+                    value: typeof value === 'string' ? value : JSON.stringify(value),
+                    category,
+                    importance,
+                    model_id: modelId
+                })
+            });
+            if (response.ok) {
+                console.log(`Stored knowledge to database: ${key}`);
+            }
+        } catch (error) {
+            console.error('Failed to store knowledge to database:', error);
+        }
     },
     
-    // Get comprehensive context for models
-    getCollaborativeContext() {
-        return {
-            recentConversations: this.getRecentConversations(5),
-            importantKnowledge: Array.from(this.knowledgeBase.entries())
+    // Store conversation to database
+    async storeConversationToDB(modelId, channel, userMessage, aiResponse, summary = null, importance = 'normal', category = null, tags = []) {
+        try {
+            const response = await fetch('/api/ai/conversations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model_id: modelId,
+                    channel,
+                    user_message: userMessage,
+                    ai_response: aiResponse,
+                    summary,
+                    importance,
+                    category,
+                    tags
+                })
+            });
+            if (response.ok) {
+                console.log(`Stored conversation to database`);
+            }
+        } catch (error) {
+            console.error('Failed to store conversation to database:', error);
+        }
+    },
+    
+    // Retrieve conversations from database
+    async getConversationsFromDB(options = {}) {
+        try {
+            const params = new URLSearchParams();
+            if (options.model_id) params.append('model_id', options.model_id);
+            if (options.channel) params.append('channel', options.channel);
+            if (options.importance) params.append('importance', options.importance);
+            if (options.category) params.append('category', options.category);
+            if (options.limit) params.append('limit', options.limit);
+            if (options.search) params.append('search', options.search);
+            
+            const response = await fetch(`/api/ai/conversations?${params.toString()}`);
+            if (response.ok) {
+                const data = await response.json();
+                return data.conversations || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('Failed to get conversations from database:', error);
+            return [];
+        }
+    },
+    
+    // Retrieve knowledge from database
+    async getKnowledgeFromDB(options = {}) {
+        try {
+            const params = new URLSearchParams();
+            if (options.key) params.append('key', options.key);
+            if (options.category) params.append('category', options.category);
+            if (options.importance) params.append('importance', options.importance);
+            if (options.limit) params.append('limit', options.limit);
+            if (options.search) params.append('search', options.search);
+            
+            const response = await fetch(`/api/ai/knowledge?${params.toString()}`);
+            if (response.ok) {
+                const data = await response.json();
+                return data.knowledge || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('Failed to get knowledge from database:', error);
+            return [];
+        }
+    },
+    
+    // Get comprehensive context for models (includes database conversations)
+    async getCollaborativeContext() {
+        // Get current session conversations
+        const recentConversations = this.getRecentConversations(5);
+        
+        // Get important conversations from database
+        const dbConversations = await this.getConversationsFromDB({
+            importance: 'high',
+            limit: 10
+        });
+        
+        // Get important knowledge from database
+        const dbKnowledge = await this.getKnowledgeFromDB({
+            importance: 'high',
+            limit: 10
+        });
+        
+        // Combine memory and database knowledge
+        const importantKnowledge = [
+            ...Array.from(this.knowledgeBase.entries())
                 .filter(([_, k]) => k.importance === 'high')
                 .slice(0, 5)
-                .map(([key, value]) => ({ key, value: value.value })),
+                .map(([key, value]) => ({ key, value: value.value, source: 'memory' })),
+            ...dbKnowledge.slice(0, 5).map(k => ({ key: k.key, value: k.value, source: 'database' }))
+        ];
+        
+        return {
+            recentConversations: recentConversations,
+            databaseConversations: dbConversations,
+            importantKnowledge: importantKnowledge,
             activeTasks: Array.from(this.taskQueue.values())
                 .filter(t => t.status === 'pending')
                 .slice(0, 3),
@@ -341,36 +460,25 @@ class GummyBearAI {
     }
     
     setupMemoryManagement() {
-        // Periodic cleanup for low-end devices
-        const cleanupInterval = this.deviceProfile.tier === 'low' ? 30000 : 60000; // 30s or 60s
+        // No cleanup - data persists in database
+        // Just sync important data to database periodically
+        const syncInterval = 30000; // 30 seconds
         
-        this.memoryCleanupInterval = setInterval(() => {
-            // Cleanup old knowledge
-            ModelSharedState.cleanupOldKnowledge(
-                this.deviceProfile.tier === 'low' ? 30 : 50
-            );
-            
-            // Cleanup old consensus if any
-            const maxConsensusAge = 300000; // 5 minutes
-            const now = Date.now();
-            ModelSharedState.consensus.forEach((consensus, key) => {
-                if (now - consensus.createdAt > maxConsensusAge) {
-                    ModelSharedState.consensus.delete(key);
+        this.memoryCleanupInterval = setInterval(async () => {
+            // Sync any important in-memory knowledge to database
+            ModelSharedState.knowledgeBase.forEach(async (knowledge, key) => {
+                if (knowledge.importance === 'high' && !knowledge.synced) {
+                    await ModelSharedState.storeKnowledgeToDB(
+                        key,
+                        knowledge.value,
+                        knowledge.category,
+                        knowledge.importance,
+                        knowledge.modelId
+                    );
+                    knowledge.synced = true;
                 }
             });
-            
-            // Cleanup completed tasks
-            ModelSharedState.taskQueue.forEach((task, key) => {
-                if (task.status === 'completed' && now - task.timestamp > 600000) { // 10 minutes
-                    ModelSharedState.taskQueue.delete(key);
-                }
-            });
-            
-            // Force garbage collection hint if available
-            if (this.deviceProfile.tier === 'low' && window.gc) {
-                window.gc();
-            }
-        }, cleanupInterval);
+        }, syncInterval);
     }
     
     cleanup() {
@@ -547,8 +655,8 @@ class GummyBearAI {
             // Load context for the channel
             await this.loadContext(channel);
             
-            // Get enhanced collaborative context from other models
-            const collaborativeContext = ModelSharedState.getCollaborativeContext();
+            // Get enhanced collaborative context from other models (includes database)
+            const collaborativeContext = await ModelSharedState.getCollaborativeContext();
             const sharedContext = this.buildSharedContext(collaborativeContext);
             
             // Create system prompt based on GummyBear's requirements with enhanced collaboration
@@ -566,16 +674,18 @@ class GummyBearAI {
             // Parse AI response for actions first
             const parsedResponse = this.parseAIResponse(response);
             
-            // Store conversation in shared state with enhanced metadata
-            ModelSharedState.addConversation(this.currentModelId, message, response);
+            // Store conversation in shared state with enhanced metadata (and database)
+            const importance = response.includes('exploit') || response.includes('vulnerability') || response.includes('CVE') ? 'high' : 'normal';
+            await ModelSharedState.addConversation(this.currentModelId, message, response, channel, importance);
             
-            // Share important findings automatically
+            // Share important findings automatically (stored to database)
             if (response.includes('exploit') || response.includes('vulnerability') || response.includes('CVE')) {
-                ModelSharedState.shareKnowledge(
+                await ModelSharedState.shareKnowledge(
                     `finding_${Date.now()}`,
                     { message, response: parsedResponse.text },
                     'security',
-                    'high'
+                    'high',
+                    this.currentModelId
                 );
             }
             
@@ -611,13 +721,29 @@ class GummyBearAI {
             return null;
         }
         
+        // Combine current session and database conversations
+        const allConversations = [
+            ...(collaborativeContext.recentConversations || []),
+            ...(collaborativeContext.databaseConversations || []).map(db => ({
+                modelId: db.model_id,
+                message: db.user_message,
+                response: db.ai_response,
+                timestamp: new Date(db.created_at).getTime(),
+                channel: db.channel,
+                summary: db.summary,
+                fromDatabase: true
+            }))
+        ].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10); // Get 10 most recent total
+        
         const context = {
-            otherModels: collaborativeContext.recentConversations?.map(conv => ({
+            otherModels: allConversations.map(conv => ({
                 model: conv.modelId,
                 recentActivity: conv.message ? conv.message.substring(0, 100) + '...' : 'Processing...',
                 timestamp: conv.timestamp,
-                response: conv.response ? conv.response.substring(0, 150) + '...' : null
-            })) || [],
+                response: conv.response ? conv.response.substring(0, 150) + '...' : null,
+                summary: conv.summary || null,
+                fromDatabase: conv.fromDatabase || false
+            })),
             importantKnowledge: collaborativeContext.importantKnowledge || [],
             activeTasks: collaborativeContext.activeTasks || [],
             recentConsensus: collaborativeContext.consensus?.map(c => ({
@@ -627,7 +753,8 @@ class GummyBearAI {
                     opinion: opinion.opinion,
                     confidence: opinion.confidence
                 }))
-            })) || []
+            })) || [],
+            hasDatabaseHistory: (collaborativeContext.databaseConversations || []).length > 0
         };
         
         return context;
@@ -687,18 +814,22 @@ class GummyBearAI {
             }
             
             if (infoParts.length > 0) {
+                const dbNote = sharedContext.hasDatabaseHistory ? 
+                    '\nNote: Some of this context comes from previous sessions stored in the database, so you can reference conversations that happened before this session.' : '';
+                
                 sharedInfo = `
 
 ENHANCED COLLABORATION CONTEXT:
-You are part of a cohesive multi-model AI system working together. Here's what other models are doing:
-${infoParts.join('\n\n')}
+You are part of a cohesive multi-model AI system working together. Here's what other models are doing (including from database history):
+${infoParts.join('\n\n')}${dbNote}
 
 COLLABORATION GUIDELINES:
-- Reference and build upon insights from other models
-- Share important findings (use [SHARE:category:key:value] format)
+- Reference and build upon insights from other models (both current session and database history)
+- Share important findings (use [SHARE:category:key:value] format) - they will be stored permanently
 - Request consensus on complex decisions (use [CONSENSUS:question] format)
 - Delegate specialized tasks when appropriate (use [DELEGATE:taskType:data] format)
-- Acknowledge other models' contributions in your responses`;
+- Acknowledge other models' contributions in your responses
+- Reference old conversations when relevant: "Based on a previous conversation about X..."`;
             }
         }
         
@@ -774,7 +905,7 @@ Remember: You are part of a cohesive team of AI models. Work together seamlessly
             cleanResponse = cleanResponse.replace(match[0], '');
         }
         
-        // Parse sharing directives
+        // Parse sharing directives (stores to database)
         const shareRegex = /\[SHARE:([^:]+):([^:]+):([^\]]+)\]/g;
         while ((match = shareRegex.exec(response)) !== null) {
             shares.push({
@@ -782,7 +913,7 @@ Remember: You are part of a cohesive team of AI models. Work together seamlessly
                 key: match[2],
                 value: match[3]
             });
-            ModelSharedState.shareKnowledge(match[2], match[3], match[1], 'normal');
+            ModelSharedState.shareKnowledge(match[2], match[3], match[1], 'normal', this.currentModelId);
             cleanResponse = cleanResponse.replace(match[0], '');
         }
         

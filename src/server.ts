@@ -540,6 +540,162 @@ app.post('/api/ai/action', async (req, res) => {
   }
 });
 
+// AI Conversations API - Store and retrieve conversations from database
+app.post('/api/ai/conversations', async (req, res) => {
+  try {
+    const { model_id, channel, user_message, ai_response, summary, importance, category, tags } = req.body;
+    
+    if (!model_id || !user_message || !ai_response) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const result = await db.query(
+      `INSERT INTO ai_conversations 
+       (model_id, channel, user_message, ai_response, summary, importance, category, tags, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
+      [
+        model_id,
+        channel || 'global',
+        user_message,
+        ai_response,
+        summary || null,
+        importance || 'normal',
+        category || null,
+        tags || [],
+        JSON.stringify({ stored_at: new Date().toISOString() })
+      ]
+    );
+    
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (error: any) {
+    console.error('Store conversation error:', error);
+    res.status(500).json({ error: 'Failed to store conversation' });
+  }
+});
+
+app.get('/api/ai/conversations', async (req, res) => {
+  try {
+    const { model_id, channel, importance, category, limit, search } = req.query;
+    
+    let query = 'SELECT * FROM ai_conversations WHERE 1=1';
+    const params: any[] = [];
+    let paramCount = 1;
+    
+    if (model_id) {
+      query += ` AND model_id = $${paramCount++}`;
+      params.push(model_id);
+    }
+    if (channel) {
+      query += ` AND channel = $${paramCount++}`;
+      params.push(channel);
+    }
+    if (importance) {
+      query += ` AND importance = $${paramCount++}`;
+      params.push(importance);
+    }
+    if (category) {
+      query += ` AND category = $${paramCount++}`;
+      params.push(category);
+    }
+    if (search) {
+      query += ` AND (user_message ILIKE $${paramCount} OR ai_response ILIKE $${paramCount} OR summary ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+      paramCount++;
+    }
+    
+    query += ' ORDER BY created_at DESC';
+    
+    const queryLimit = limit ? parseInt(limit as string) : 20;
+    query += ` LIMIT $${paramCount++}`;
+    params.push(queryLimit);
+    
+    const result = await db.query(query, params);
+    res.json({ conversations: result.rows });
+  } catch (error: any) {
+    console.error('Get conversations error:', error);
+    res.status(500).json({ error: 'Failed to get conversations' });
+  }
+});
+
+// AI Knowledge Base API - Store and retrieve knowledge
+app.post('/api/ai/knowledge', async (req, res) => {
+  try {
+    const { key, value, category, importance, model_id } = req.body;
+    
+    if (!key || !value) {
+      return res.status(400).json({ error: 'Missing required fields: key and value' });
+    }
+    
+    const result = await db.query(
+      `INSERT INTO ai_knowledge (key, value, category, importance, model_id, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (key) 
+       DO UPDATE SET 
+         value = EXCLUDED.value,
+         category = EXCLUDED.category,
+         importance = EXCLUDED.importance,
+         access_count = ai_knowledge.access_count + 1,
+         updated_at = CURRENT_TIMESTAMP,
+         metadata = EXCLUDED.metadata
+       RETURNING id, access_count`,
+      [
+        key,
+        value,
+        category || 'general',
+        importance || 'normal',
+        model_id || null,
+        JSON.stringify({ stored_at: new Date().toISOString() })
+      ]
+    );
+    
+    res.json({ success: true, id: result.rows[0].id, access_count: result.rows[0].access_count });
+  } catch (error: any) {
+    console.error('Store knowledge error:', error);
+    res.status(500).json({ error: 'Failed to store knowledge' });
+  }
+});
+
+app.get('/api/ai/knowledge', async (req, res) => {
+  try {
+    const { key, category, importance, limit, search } = req.query;
+    
+    let query = 'SELECT * FROM ai_knowledge WHERE 1=1';
+    const params: any[] = [];
+    let paramCount = 1;
+    
+    if (key) {
+      query += ` AND key = $${paramCount++}`;
+      params.push(key);
+    }
+    if (category) {
+      query += ` AND category = $${paramCount++}`;
+      params.push(category);
+    }
+    if (importance) {
+      query += ` AND importance = $${paramCount++}`;
+      params.push(importance);
+    }
+    if (search) {
+      query += ` AND (key ILIKE $${paramCount} OR value ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+      paramCount++;
+    }
+    
+    query += ' ORDER BY importance DESC, access_count DESC, updated_at DESC';
+    
+    const queryLimit = limit ? parseInt(limit as string) : 50;
+    query += ` LIMIT $${paramCount++}`;
+    params.push(queryLimit);
+    
+    const result = await db.query(query, params);
+    res.json({ knowledge: result.rows });
+  } catch (error: any) {
+    console.error('Get knowledge error:', error);
+    res.status(500).json({ error: 'Failed to get knowledge' });
+  }
+});
+
 app.get('/api/ai/context', async (req, res) => {
   try {
     const user = await authenticateRequest(req);

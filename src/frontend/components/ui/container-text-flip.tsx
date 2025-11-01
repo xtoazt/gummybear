@@ -58,21 +58,11 @@ export function ContainerTextFlip({
       animate={{ width }}
       transition={{ duration: animationDuration / 2000 }}
       className={cn(
-        "relative inline-block rounded-lg pt-2 pb-3 px-4 text-center text-4xl font-bold md:text-7xl",
-        // DaisyUI theme-aware styling - using semantic colors
+        "relative inline-block rounded-lg px-4 py-2 text-center text-4xl font-bold md:text-7xl",
+        // Clean DaisyUI styling - minimal and professional
         "bg-base-200 text-base-content",
-        // DaisyUI shadow utilities with theme-aware colors
-        "shadow-lg",
-        // Border with theme-aware color
-        "border border-base-300",
-        // Subtle gradient overlay using DaisyUI colors for depth
-        "before:absolute before:inset-0 before:rounded-lg",
-        "before:bg-gradient-to-b before:from-base-200/60 before:via-base-200/40 before:to-base-300/60",
-        "before:pointer-events-none",
-        // Enhanced shadow with DaisyUI theme variables
-        "shadow-[0_4px_12px_hsl(var(--bc)/0.08),inset_0_1px_0_hsl(var(--b1)/0.5)]",
-        // Smooth transition for theme changes
-        "transition-colors duration-300",
+        "shadow-md border border-base-300",
+        "transition-all duration-300",
         className,
       )}
       key={words[currentWordIndex]}

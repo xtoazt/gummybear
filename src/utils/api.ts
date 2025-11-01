@@ -29,8 +29,15 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   // Authentication
-  async login(username: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  async login(username: string, password: string): Promise<{ success: boolean; user?: User; token?: string; error?: string }> {
     return request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+  },
+
+  async register(username: string, password: string): Promise<{ success: boolean; user?: User; token?: string; message?: string; error?: string }> {
+    return request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });

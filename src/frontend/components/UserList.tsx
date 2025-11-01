@@ -56,7 +56,7 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
 
           return (
             <div key={role}>
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wide px-2 mb-2">
+              <div className="text-xs font-bold text-base-content/60 uppercase tracking-wide px-2 mb-2">
                 {ROLE_NAMES[role]} — {roleUsers.length}
               </div>
               <div className="space-y-1">
@@ -73,7 +73,7 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
                       <div className="flex items-center gap-2">
                         <div className="relative">
                           <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold"
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-base-content font-bold"
                             style={{ background: ROLE_COLORS[user.role] || '#666' }}
                           >
                             {user.username.charAt(0).toUpperCase()}
@@ -83,10 +83,10 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-white truncate">
+                          <div className="text-sm font-medium text-base-content truncate">
                             {user.username}
                             {user.id === currentUser.id && (
-                              <span className="text-xs text-gray-500 ml-1">(you)</span>
+                              <span className="text-xs text-base-content/60 ml-1">(you)</span>
                             )}
                           </div>
                           {user.status !== 'approved' && (
@@ -99,12 +99,12 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
                       
                       {canManage && (
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-1 shadow-xl min-w-[120px]">
+                          <div className="bg-base-200/90 backdrop-blur-sm border border-base-300 rounded-lg p-1 shadow-xl min-w-[120px]">
                             {isKing && (
                               <select
                                 onChange={(e) => e.target.value && onChangeRole?.(user.id, e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full px-2 py-1 bg-black/50 border border-white/10 rounded text-xs text-white mb-1"
+                                className="w-full px-2 py-1 bg-base-100 border border-base-300 rounded text-xs text-base-content mb-1"
                                 defaultValue={user.role}
                               >
                                 <option value="king">King</option>

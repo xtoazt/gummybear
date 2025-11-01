@@ -10,22 +10,21 @@ interface KingDashboardProps {
 
 export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }: KingDashboardProps) {
   return (
-    <div className="w-[500px] bg-black/80 border-l border-white/10 h-screen flex flex-col shadow-xl" style={{ backdropFilter: 'blur(16px)' }}>
+    <div className="w-[500px] bg-base-200/80 border-l border-base-300 h-screen flex flex-col shadow-xl backdrop-blur-lg">
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="px-6 py-4 bg-black/80 border-b border-white/10 flex justify-between items-center shadow-lg"
-        style={{ backdropFilter: 'blur(16px)' }}
+        className="px-6 py-4 bg-base-200/80 border-b border-base-300 flex justify-between items-center shadow-lg backdrop-blur-lg"
       >
-        <h2 className="text-xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
+        <h2 className="text-xl font-bold text-primary">
           💻 Code Review
         </h2>
         <motion.button
           onClick={onRefresh}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+          className="px-4 py-2 text-sm text-base-content/70 hover:text-base-content transition-colors"
         >
           Refresh
         </motion.button>
@@ -40,7 +39,7 @@ export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }
               animate={{ opacity: 1 }}
               className="flex items-center justify-center h-full"
             >
-              <p className="text-gray-500 italic text-center">
+              <p className="text-base-content/60 italic text-center">
                 No pending changes. All clear! 👑
               </p>
             </motion.div>
@@ -66,19 +65,19 @@ export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }
                   className="relative group"
                 >
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                  <div className="relative bg-black/70 border border-white/20 rounded-xl p-4 shadow-lg" style={{ backdropFilter: 'blur(12px)' }}>
+                  <div className="relative bg-base-200/70 border border-base-300 rounded-xl p-4 shadow-lg backdrop-blur-sm">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="text-base font-bold mb-1 text-white">{change.title}</h3>
-                        <p className="text-sm text-gray-400">{change.description || ''}</p>
+                        <h3 className="text-base font-bold mb-1 text-base-content">{change.title}</h3>
+                        <p className="text-sm text-base-content/60">{change.description || ''}</p>
                       </div>
-                      <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full border border-red-500/30">
+                      <span className="px-2 py-1 bg-error/20 text-error text-xs font-medium rounded-full border border-error/30">
                         {change.change_type}
                       </span>
                     </div>
 
-                    <div className="mb-3 p-3 bg-black/50 border border-white/5 rounded-lg max-h-[200px] overflow-auto">
-                      <code className="text-xs text-gray-400 whitespace-pre-wrap break-all">
+                    <div className="mb-3 p-3 bg-base-100 border border-base-300 rounded-lg max-h-[200px] overflow-auto">
+                      <code className="text-xs text-base-content/70 whitespace-pre-wrap break-all">
                         {detailsContent}
                       </code>
                     </div>
@@ -92,7 +91,7 @@ export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg font-semibold text-white hover:shadow-lg hover:shadow-green-500/50 transition-all"
+                        className="flex-1 px-4 py-2 bg-success rounded-lg font-semibold text-success-content hover:shadow-lg hover:shadow-success/50 transition-all"
                       >
                         ✓ Approve
                       </motion.button>

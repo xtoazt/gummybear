@@ -203,7 +203,7 @@ export function ChatArea({
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="px-3 py-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full font-semibold shadow-lg"
+              className="px-3 py-1 bg-error text-error-content text-xs rounded-full font-semibold shadow-lg"
             >
               {mentionedMessages.length} ping{mentionedMessages.length > 1 ? 's' : ''}
             </motion.span>
@@ -211,7 +211,7 @@ export function ChatArea({
         </div>
         <div className="flex items-center gap-3">
           <div
-            className="px-3 py-1 rounded-full text-sm font-semibold text-white"
+            className="px-3 py-1 rounded-full text-sm font-semibold text-base-content"
             style={{ background: ROLE_COLORS[currentUser.role] || '#666' }}
           >
             {ROLE_NAMES[currentUser.role] || currentUser.role}
@@ -238,7 +238,7 @@ export function ChatArea({
               animate={{ opacity: 1 }}
               className="flex items-center justify-center h-full"
             >
-              <p className="text-gray-500 text-center">No messages yet. Start the conversation!</p>
+                  <p className="text-base-content/60 text-center">No messages yet. Start the conversation!</p>
             </motion.div>
           ) : (
             channelMessages.map((message, index) => {
@@ -263,7 +263,7 @@ export function ChatArea({
                   <motion.div
                     whileHover={{ scale: 1.15 }}
                     onClick={() => setShowUserMenu(showUserMenu === message.sender_id ? null : message.sender_id)}
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 cursor-pointer relative shadow-lg"
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-base-content font-bold text-sm flex-shrink-0 cursor-pointer relative shadow-lg"
                     style={{ 
                       background: `linear-gradient(135deg, ${roleColor}, ${roleColor}dd)`,
                       boxShadow: `0 4px 15px ${roleColor}40`
@@ -280,17 +280,17 @@ export function ChatArea({
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="absolute z-50 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-2 shadow-xl"
+                      className="absolute z-50 bg-base-200/90 backdrop-blur-sm border border-base-300 rounded-lg p-2 shadow-xl"
                       style={{ left: isOwn ? 'auto' : '3rem', right: isOwn ? '3rem' : 'auto' }}
                     >
-                      <div className="text-sm font-bold mb-2 text-white">{message.username}</div>
-                      <div className="text-xs text-gray-400 mb-3">Role: {ROLE_NAMES[message.role]}</div>
+                      <div className="text-sm font-bold mb-2 text-base-content">{message.username}</div>
+                      <div className="text-xs text-base-content/60 mb-3">Role: {ROLE_NAMES[message.role]}</div>
                       <div className="space-y-1">
                         {currentUser.role === 'king' && (
                           <>
                             <select
                               onChange={(e) => e.target.value && handleRoleChange(message.sender_id, e.target.value)}
-                              className="w-full px-2 py-1 bg-black/50 border border-white/10 rounded text-xs text-white"
+                              className="w-full px-2 py-1 bg-base-100 border border-base-300 rounded text-xs text-base-content"
                               defaultValue=""
                             >
                               <option value="">Change Role</option>
@@ -330,7 +330,7 @@ export function ChatArea({
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-bold text-sm text-white">{message.username}</span>
+                      <span className="font-bold text-sm text-base-content">{message.username}</span>
                       <span
                         className="px-3 py-1 rounded-full text-xs font-semibold shadow-sm"
                         style={{
@@ -341,12 +341,12 @@ export function ChatArea({
                       >
                         {ROLE_NAMES[message.role] || message.role}
                       </span>
-                      <span className="text-xs text-gray-400">{formatTime(message.created_at)}</span>
+                          <span className="text-xs text-base-content/60">{formatTime(message.created_at)}</span>
                       {isOwn && hoveredMessage === message.id && (
                         <div className="flex gap-1 ml-auto opacity-0 group-hover/message:opacity-100 transition-opacity">
                           <button
                             onClick={() => setEditingMessage(message.id)}
-                            className="text-xs text-gray-400 hover:text-white"
+                                className="text-xs text-base-content/60 hover:text-base-content"
                           >
                             Edit
                           </button>
@@ -398,17 +398,17 @@ export function ChatArea({
                             setEditingMessage(null);
                           }
                         }}
-                        className="w-full bg-black/50 border border-white/20 rounded px-2 py-1 text-sm text-white"
+                            className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm text-base-content"
                         autoFocus
                       />
                     ) : (
                       <>
                         <p 
-                          className="text-sm text-white/95 break-words leading-relaxed"
+                          className="text-sm text-base-content break-words leading-relaxed"
                           dangerouslySetInnerHTML={{ __html: parseMentions(message.content, allUsers) }}
                         />
                         {message.metadata?.edited && (
-                          <span className="text-xs text-gray-400 italic ml-2 opacity-75">(edited)</span>
+                          <span className="text-xs text-base-content/60 italic ml-2 opacity-75">(edited)</span>
                         )}
                       </>
                     )}
@@ -422,8 +422,8 @@ export function ChatArea({
                             key={emoji}
                             className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 border transition-colors ${
                               hasReacted 
-                                ? 'bg-white/20 border-white/30' 
-                                : 'bg-black/50 hover:bg-black/70 border-white/10'
+                                ? 'bg-primary/20 border-primary/30' 
+                                : 'bg-base-200 hover:bg-base-300 border-base-300'
                             }`}
                             onClick={async () => {
                               try {
@@ -435,7 +435,7 @@ export function ChatArea({
                             }}
                           >
                             <span>{emoji}</span>
-                            <span className="text-gray-400">{Array.isArray(userIds) ? userIds.length : 0}</span>
+                            <span className="text-base-content/60">{Array.isArray(userIds) ? userIds.length : 0}</span>
                           </button>
                         );
                       })}
@@ -472,27 +472,27 @@ export function ChatArea({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute bottom-full left-4 mb-2 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-2 shadow-xl z-50 min-w-[200px]"
+              className="absolute bottom-full left-4 mb-2 bg-base-200/90 backdrop-blur-sm border border-base-300 rounded-lg p-2 shadow-xl z-50 min-w-[200px]"
             >
               {filteredUsers.length > 0 ? (
                 filteredUsers.map(user => (
                   <button
                     key={user.id}
                     onClick={() => handleMentionSelect(user.username)}
-                    className="w-full text-left px-3 py-2 hover:bg-white/10 rounded flex items-center gap-2 text-sm"
+                    className="w-full text-left px-3 py-2 hover:bg-base-300 rounded flex items-center gap-2 text-sm"
                   >
                     <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-base-content font-bold"
                       style={{ background: ROLE_COLORS[user.role] || '#666' }}
                     >
                       {user.username.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-white">{user.username}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{ROLE_NAMES[user.role]}</span>
+                    <span className="text-base-content">{user.username}</span>
+                    <span className="text-xs text-base-content/60 ml-auto">{ROLE_NAMES[user.role]}</span>
                   </button>
                 ))
               ) : (
-                <div className="px-3 py-2 text-sm text-gray-400">No users found</div>
+                <div className="px-3 py-2 text-sm text-base-content/60">No users found</div>
               )}
             </motion.div>
           )}
@@ -502,7 +502,7 @@ export function ChatArea({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute bottom-full left-4 mb-2 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-xl z-50"
+              className="absolute bottom-full left-4 mb-2 bg-base-200/90 backdrop-blur-sm border border-base-300 rounded-lg p-3 shadow-xl z-50"
             >
               <div className="grid grid-cols-6 gap-2">
                 {EMOJIS.map(emoji => (
@@ -527,7 +527,7 @@ export function ChatArea({
                 placeholder="Type your message... Use @ to mention someone"
                 maxLength={2000}
                 rows={1}
-                className="w-full px-5 py-4 bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50 transition-all resize-none"
+                className="w-full px-5 py-4 bg-base-200/40 backdrop-blur-sm border border-base-300 rounded-xl text-base-content placeholder-base-content/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all resize-none"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -542,7 +542,7 @@ export function ChatArea({
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               whileHover={{ scale: 1.1, rotate: 15 }}
               whileTap={{ scale: 0.95 }}
-              className="px-5 py-4 text-xl hover:bg-white/10 rounded-xl transition-colors backdrop-blur-sm border border-white/10"
+              className="px-5 py-4 text-xl hover:bg-base-300 rounded-xl transition-colors backdrop-blur-sm border border-base-300"
             >
               😊
             </motion.button>
@@ -554,7 +554,7 @@ export function ChatArea({
               className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#ff6b6b_0%,#ee5a52_50%,#ff6b6b_100%)]"></span>
-              <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white backdrop-blur-3xl">
+                  <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-content backdrop-blur-3xl">
                 Send
               </span>
             </motion.button>

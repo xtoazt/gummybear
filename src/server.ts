@@ -147,6 +147,72 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Registration endpoint
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    if (username.length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Check if user already exists
+    const existingUser = await userModel.findByUsername(username);
+    if (existingUser) {
+      return res.status(409).json({ error: 'Username already exists' });
+    }
+
+    // Create new user (status will be 'pending' by default)
+    const userId = await userModel.create(username, password);
+    
+    if (userId) {
+      // Auto-approve for now (can be changed to require admin approval)
+      const newUser = await userModel.findById(userId);
+      if (newUser) {
+        // Generate JWT token
+        const token = jwt.sign(
+          { userId: newUser.id, username: newUser.username },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        res.json({
+          success: true,
+          token,
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            role: newUser.role,
+            status: newUser.status,
+            created_at: newUser.created_at,
+            last_seen: newUser.last_seen || new Date().toISOString()
+          },
+          message: 'Account created successfully'
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to create user account' });
+      }
+    } else {
+      res.status(500).json({ error: 'Failed to create user account' });
+    }
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    if (error.code === '23505') { // PostgreSQL unique constraint violation
+      res.status(409).json({ error: 'Username already exists' });
+    } else {
+      res.status(500).json({ error: 'Registration failed' });
+    }
+  }
+});
+
 // WebRTC Signaling Endpoints
 // Register/update peer presence
 app.post('/api/signaling/register', async (req, res) => {

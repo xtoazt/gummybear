@@ -45,7 +45,7 @@ export function Sidebar({ currentChannel, onChannelChange, isKing, pendingCount,
           <span className="relative z-10">{channel.icon}</span>
           
           {/* Tooltip */}
-          <div className="absolute left-full ml-2 px-3 py-1.5 bg-black/90 border border-white/10 rounded-lg text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+          <div className="absolute left-full ml-2 px-3 py-1.5 bg-base-200 border border-base-300 rounded-lg text-xs font-medium text-base-content opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
             {channel.label}
           </div>
         </motion.button>
@@ -77,14 +77,14 @@ export function Sidebar({ currentChannel, onChannelChange, isKing, pendingCount,
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-black"
+              className="absolute -top-1 -right-1 w-6 h-6 bg-error rounded-full flex items-center justify-center text-xs font-bold text-error-content border-2 border-base-100"
             >
               {pendingCount > 99 ? '99+' : pendingCount}
             </motion.div>
           )}
           
           {/* Tooltip */}
-          <div className="absolute left-full ml-2 px-3 py-1.5 bg-black/90 border border-white/10 rounded-lg text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+          <div className="absolute left-full ml-2 px-3 py-1.5 bg-base-200 border border-base-300 rounded-lg text-xs font-medium text-base-content opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
             Code Review
           </div>
         </motion.button>

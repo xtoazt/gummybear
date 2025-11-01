@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
 import { KingDashboard } from './KingDashboard';
+import { UserList } from './UserList';
 import type { User, Message, PendingChange, Channel } from '../types';
+import { api } from '../../utils/api';
 
 interface ChatAppProps {
   currentUser: User;
@@ -27,14 +29,52 @@ export function ChatApp({
   onRejectChange
 }: ChatAppProps) {
   const [currentChannel, setCurrentChannel] = useState<Channel>('global');
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   const isKing = currentUser.role === 'king';
+  const isAdmin = currentUser.role === 'king' || currentUser.role === 'admin';
 
   useEffect(() => {
     if (isKing && currentChannel === 'code') {
       onLoadPendingChanges();
     }
   }, [isKing, currentChannel, onLoadPendingChanges]);
+
+  useEffect(() => {
+    // Fetch all users
+    const fetchUsers = async () => {
+      try {
+        const { users } = await api.getUsers();
+        setAllUsers(users);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
+
+    if (isAdmin) {
+      fetchUsers();
+      const interval = setInterval(fetchUsers, 30000); // Refresh every 30s
+      return () => clearInterval(interval);
+    }
+  }, [isAdmin]);
+
+  const handleKickUser = async (userId: number) => {
+    try {
+      await api.banUser(userId);
+      setAllUsers(prev => prev.filter(u => u.id !== userId));
+    } catch (error) {
+      console.error('Failed to kick user:', error);
+    }
+  };
+
+  const handleChangeRole = async (userId: number, role: string) => {
+    try {
+      await api.changeUserRole(userId, role);
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: role as any } : u));
+    } catch (error) {
+      console.error('Failed to change role:', error);
+    }
+  };
 
   return (
     <motion.div
@@ -57,8 +97,20 @@ export function ChatApp({
           currentChannel={currentChannel}
           onSendMessage={onSendMessage}
           onlineUsers={onlineUsers}
+          allUsers={allUsers}
+          onKickUser={handleKickUser}
+          onChangeRole={handleChangeRole}
         />
       </div>
+
+      {/* User List Sidebar */}
+      <UserList
+        users={allUsers.length > 0 ? allUsers : [currentUser]}
+        onlineUsers={onlineUsers}
+        currentUser={currentUser}
+        onKickUser={handleKickUser}
+        onChangeRole={handleChangeRole}
+      />
 
       {isKing && currentChannel === 'code' && (
         <motion.div

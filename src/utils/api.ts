@@ -60,6 +60,34 @@ export const api = {
     });
   },
 
+  async editMessage(messageId: number, content: string): Promise<{ success: boolean }> {
+    return request('/messages.php', {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: messageId,
+        content,
+      }),
+    });
+  },
+
+  async deleteMessage(messageId: number): Promise<{ success: boolean }> {
+    return request('/messages.php', {
+      method: 'DELETE',
+      body: JSON.stringify({ id: messageId }),
+    });
+  },
+
+  async addReaction(messageId: number, emoji: string): Promise<{ success: boolean }> {
+    return request('/messages.php', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'add_reaction',
+        message_id: messageId,
+        emoji,
+      }),
+    });
+  },
+
   // Requests
   async getRequests(): Promise<{ requests: AccessRequest[] }> {
     return request('/requests.php');

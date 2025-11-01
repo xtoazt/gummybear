@@ -14,8 +14,14 @@ export interface Message {
   channel: string;
   content: string;
   message_type: 'text' | 'component' | 'ai';
-  metadata: Record<string, any>;
+  metadata?: {
+    reactions?: Record<string, number[]>;
+    edited?: boolean;
+    edited_at?: string;
+    mentions?: number[];
+  };
   created_at: string;
+  updated_at?: string;
   username: string;
   role: string;
 }

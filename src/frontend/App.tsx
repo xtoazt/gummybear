@@ -32,8 +32,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<UIShowcase />} />
       <Route path="/showcase" element={<UIShowcase />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/demo" element={<DemoPage />} />
       <Route 
         path="/scanner" 

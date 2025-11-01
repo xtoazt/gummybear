@@ -39,12 +39,12 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
   const roleOrder = ['king', 'admin', 'support', 'twin', 'bankinda'];
 
   return (
-    <div className="w-60 bg-black/50 backdrop-blur-sm border-l border-white/10 h-screen overflow-y-auto">
+    <div className="w-60 bg-black/60 backdrop-blur-xl border-l border-white/10 h-screen overflow-y-auto shadow-lg">
       <div className="p-4 border-b border-white/10">
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-2">
           Members — {users.length}
         </h3>
-        <div className="text-xs text-green-400 font-mono">
+        <div className="text-xs text-pink-400 font-semibold">
           {onlineUsers.length} online
         </div>
       </div>
@@ -67,8 +67,8 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
                   return (
                     <motion.div
                       key={user.id}
-                      whileHover={{ x: 4 }}
-                      className="group relative px-2 py-1.5 rounded hover:bg-white/5 transition-colors cursor-pointer"
+                      whileHover={{ x: 4, scale: 1.02 }}
+                      className="group relative px-3 py-2 rounded-lg hover:bg-white/10 transition-all cursor-pointer backdrop-blur-sm"
                     >
                       <div className="flex items-center gap-2">
                         <div className="relative">

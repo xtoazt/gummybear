@@ -20,7 +20,7 @@ const CHANNELS = [
 
 export function Sidebar({ currentChannel, onChannelChange, isKing, pendingCount, onlineUsers }: SidebarProps) {
   return (
-    <div className="w-20 bg-black/50 backdrop-blur-sm border-r border-white/10 flex flex-col items-center py-4 gap-2 relative">
+    <div className="w-20 bg-black/60 backdrop-blur-xl border-r border-white/10 flex flex-col items-center py-4 gap-2 relative shadow-lg">
       {CHANNELS.map((channel) => (
         <motion.button
           key={channel.id}
@@ -90,7 +90,7 @@ export function Sidebar({ currentChannel, onChannelChange, isKing, pendingCount,
         </motion.button>
       )}
 
-      <div className="absolute bottom-4 text-xs text-gray-500">
+      <div className="absolute bottom-4 text-xs text-gray-400 font-medium">
         {onlineUsers} online
       </div>
     </div>

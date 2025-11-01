@@ -2,6 +2,7 @@
 export default {
   content: [
     "./index.html",
+    "./src/frontend/**/*.{js,ts,jsx,tsx}",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
@@ -11,9 +12,19 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
       },
+      backdropBlur: {
+        xs: '2px',
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+        '2xl': '24px',
+        '3xl': '32px',
+      },
       animation: {
         "spotlight": "spotlight 2s ease .75s 1 forwards",
         "shimmer": "shimmer 2s linear infinite",
+        "spin": "spin 1s linear infinite",
       },
       keyframes: {
         spotlight: {
@@ -32,6 +43,14 @@ export default {
           },
           to: {
             backgroundPosition: "-200% 0",
+          },
+        },
+        spin: {
+          from: {
+            transform: "rotate(0deg)",
+          },
+          to: {
+            transform: "rotate(360deg)",
           },
         },
       },

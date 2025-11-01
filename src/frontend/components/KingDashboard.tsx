@@ -10,12 +10,13 @@ interface KingDashboardProps {
 
 export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }: KingDashboardProps) {
   return (
-    <div className="w-[500px] bg-black/50 backdrop-blur-sm border-l border-white/10 h-screen flex flex-col">
+    <div className="w-[500px] bg-black/80 border-l border-white/10 h-screen flex flex-col shadow-xl" style={{ backdropFilter: 'blur(16px)' }}>
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="px-6 py-4 bg-black/50 backdrop-blur-sm border-b border-white/10 flex justify-between items-center"
+        className="px-6 py-4 bg-black/80 border-b border-white/10 flex justify-between items-center shadow-lg"
+        style={{ backdropFilter: 'blur(16px)' }}
       >
         <h2 className="text-xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
           💻 Code Review
@@ -65,7 +66,7 @@ export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }
                   className="relative group"
                 >
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                  <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                  <div className="relative bg-black/70 border border-white/20 rounded-xl p-4 shadow-lg" style={{ backdropFilter: 'blur(12px)' }}>
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="text-base font-bold mb-1 text-white">{change.title}</h3>

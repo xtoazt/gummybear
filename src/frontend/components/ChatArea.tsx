@@ -188,12 +188,13 @@ export function ChatArea({
   });
 
   return (
-    <div className="flex flex-col flex-1 bg-gradient-to-br from-black via-gray-900/50 to-black h-screen relative overflow-hidden">
+    <div className="flex flex-col flex-1 bg-black h-screen relative overflow-hidden">
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="px-6 py-4 bg-black/60 backdrop-blur-xl border-b border-white/10 flex justify-between items-center shadow-lg"
+        className="px-6 py-4 bg-black/80 border-b border-white/10 flex justify-between items-center shadow-lg"
+        style={{ backdropFilter: 'blur(16px)' }}
       >
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
@@ -230,7 +231,7 @@ export function ChatArea({
       </motion.div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 relative">
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 relative bg-black">
         <AnimatePresence mode="popLayout">
           {channelMessages.length === 0 ? (
             <motion.div
@@ -325,8 +326,8 @@ export function ChatArea({
                         : isMentioned
                         ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.15))'
                         : 'rgba(26, 26, 26, 0.9)',
-                      border: isOwn ? 'none' : `1px solid ${isMentioned ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 255, 255, 0.15)'}`,
-                      backdropFilter: 'blur(10px)'
+                      border: isOwn ? 'none' : `1px solid ${isMentioned ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 255, 255, 0.2)'}`,
+                      backdropFilter: 'blur(8px)'
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -465,7 +466,8 @@ export function ChatArea({
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="p-6 bg-black/60 backdrop-blur-xl border-t border-white/10 relative shadow-2xl"
+          className="p-6 bg-black/80 border-t border-white/10 relative shadow-2xl"
+          style={{ backdropFilter: 'blur(16px)' }}
         >
           {/* Mention Suggestions */}
           {showMentionSuggestions && (

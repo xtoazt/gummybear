@@ -80,7 +80,7 @@ export function ChatApp({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex h-screen overflow-hidden bg-black"
+      className="flex h-screen overflow-hidden bg-black w-full"
     >
       <Sidebar
         currentChannel={currentChannel}

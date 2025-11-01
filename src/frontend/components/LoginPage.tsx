@@ -76,7 +76,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             className="relative group"
           >
             <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <div className="relative bg-black/70 border border-white/20 rounded-2xl p-8 shadow-xl" style={{ backdropFilter: 'blur(12px)' }}>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -160,7 +160,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 className="relative group"
               >
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-0 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-lg p-4 text-center">
+                <div className="relative bg-black/70 border border-white/20 rounded-lg p-4 text-center shadow-lg" style={{ backdropFilter: 'blur(12px)' }}>
                   <div className="text-2xl mb-2">{feature.icon}</div>
                   <div className="text-xs font-bold text-gray-300">{feature.title}</div>
                   <div className="text-xs text-gray-500 mt-1">{feature.desc}</div>

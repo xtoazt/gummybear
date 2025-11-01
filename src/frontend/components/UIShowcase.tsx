@@ -70,7 +70,7 @@ const FeatureTabs = () => {
           className="relative group"
         >
           <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-          <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-xl p-8">
+          <div className="relative bg-black/70 border border-white/20 rounded-xl p-8 shadow-xl" style={{ backdropFilter: 'blur(12px)' }}>
             <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
               {content[activeTab].title}
             </h3>
@@ -107,9 +107,9 @@ const PricingCard = ({ name, price, features, highlighted = false }: { name: str
     {highlighted && (
       <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-50"></div>
     )}
-    <div className={`relative bg-black/50 backdrop-blur-sm border rounded-2xl p-8 h-full ${
-      highlighted ? 'border-pink-500/50' : 'border-white/10'
-    }`}>
+    <div className={`relative bg-black/70 border rounded-2xl p-8 h-full shadow-lg ${
+      highlighted ? 'border-pink-500/50' : 'border-white/20'
+    }`} style={{ backdropFilter: 'blur(12px)' }}>
       <div className="mb-6">
         <h3 className="text-xl font-bold mb-2 text-white">{name}</h3>
         <div className="flex items-baseline gap-2">
@@ -165,7 +165,8 @@ const Stats = () => {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.1 }}
           whileHover={{ scale: 1.05 }}
-          className="text-center p-6 bg-black/50 backdrop-blur-sm border border-white/10 rounded-xl"
+          className="text-center p-6 bg-black/70 border border-white/20 rounded-xl shadow-lg hover:border-white/30 transition-colors"
+          style={{ backdropFilter: 'blur(12px)' }}
         >
           <div className="text-4xl mb-2">{stat.icon}</div>
           <div className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-red-500 bg-clip-text text-transparent mb-1">
@@ -192,22 +193,22 @@ export function UIShowcase() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-black via-purple-900/20 to-black overflow-hidden relative">
+    <div className="min-h-screen w-full bg-black relative overflow-x-hidden">
       {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-pink-900/20"></div>
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/30 via-black to-pink-900/30 pointer-events-none"></div>
       
       <motion.div
-        className="absolute inset-0 opacity-0 dark:opacity-100"
-        animate={{
+        className="fixed inset-0 pointer-events-none"
+        style={{
           background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255, 107, 107, 0.15), transparent 40%)`
         }}
         transition={{ type: "spring", stiffness: 50, damping: 50 }}
       />
 
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 py-12 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -226,13 +227,13 @@ export function UIShowcase() {
           <motion.h1
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="text-6xl md:text-8xl font-bold mb-6"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-6"
           >
-            <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent block">
               🍭 GummyBear
             </span>
           </motion.h1>
-          <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto px-4">
             Experience the perfect blend of Aceternity UI animations and Magic UI Pro components
           </p>
         </motion.div>
@@ -259,7 +260,7 @@ export function UIShowcase() {
         >
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-            <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <div className="relative bg-black/70 border border-white/20 rounded-2xl p-8 shadow-xl" style={{ backdropFilter: 'blur(12px)' }}>
               <Stats />
             </div>
           </div>
@@ -294,7 +295,7 @@ export function UIShowcase() {
                 className="relative group"
               >
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-0 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-lg p-6 h-full">
+                <div className="relative bg-black/70 border border-white/20 rounded-lg p-6 h-full shadow-lg" style={{ backdropFilter: 'blur(12px)' }}>
                   <div className="text-4xl mb-3">{item.icon}</div>
                   <h3 className="text-xl font-bold mb-2 text-white">{item.title}</h3>
                   <p className="text-gray-400 text-sm">{item.desc}</p>
@@ -343,7 +344,7 @@ export function UIShowcase() {
         >
           <div className="relative group max-w-4xl mx-auto">
             <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-            <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-2xl p-12">
+            <div className="relative bg-black/70 border border-white/20 rounded-2xl p-12 shadow-2xl" style={{ backdropFilter: 'blur(12px)' }}>
               <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                 Ready to Build Something Amazing?
               </h2>

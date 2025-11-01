@@ -39,7 +39,7 @@ export function UserList({ users, onlineUsers, currentUser, onKickUser, onChange
   const roleOrder = ['king', 'admin', 'support', 'twin', 'bankinda'];
 
   return (
-    <div className="w-60 bg-black/60 backdrop-blur-xl border-l border-white/10 h-screen overflow-y-auto shadow-lg">
+    <div className="w-60 bg-black/80 border-l border-white/10 h-screen overflow-y-auto shadow-lg" style={{ backdropFilter: 'blur(16px)' }}>
       <div className="p-4 border-b border-white/10">
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-2">
           Members — {users.length}

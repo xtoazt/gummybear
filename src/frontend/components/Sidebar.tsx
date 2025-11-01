@@ -20,7 +20,7 @@ const CHANNELS = [
 
 export function Sidebar({ currentChannel, onChannelChange, isKing, pendingCount, onlineUsers }: SidebarProps) {
   return (
-    <div className="w-20 bg-black/60 backdrop-blur-xl border-r border-white/10 flex flex-col items-center py-4 gap-2 relative shadow-lg">
+    <div className="w-20 bg-black/80 border-r border-white/10 flex flex-col items-center py-4 gap-2 relative shadow-lg" style={{ backdropFilter: 'blur(16px)' }}>
       {CHANNELS.map((channel) => (
         <motion.button
           key={channel.id}

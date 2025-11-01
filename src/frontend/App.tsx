@@ -73,7 +73,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <div className="dark bg-black min-h-screen">
+    <div className="min-h-screen bg-black">
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

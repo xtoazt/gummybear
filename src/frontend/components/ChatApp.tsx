@@ -123,12 +123,12 @@ export function ChatApp({
           exit={{ x: 500, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
-          <KingDashboard
-            pendingChanges={pendingChanges}
-            onApprove={onApproveChange}
-            onReject={onRejectChange}
-            onRefresh={onLoadPendingChanges}
-          />
+        <KingDashboard
+          pendingChanges={pendingChanges}
+          onApprove={onApproveChange}
+          onReject={onRejectChange}
+          onRefresh={onLoadPendingChanges}
+        />
         </motion.div>
       )}
     </motion.div>

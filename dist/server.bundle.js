@@ -132,6 +132,45 @@ var Database = class {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
+        -- AI Conversations table - stores important AI conversations for cross-session access
+        CREATE TABLE IF NOT EXISTS ai_conversations (
+            id SERIAL PRIMARY KEY,
+            model_id VARCHAR(100) NOT NULL,
+            channel VARCHAR(50) DEFAULT 'global',
+            user_message TEXT NOT NULL,
+            ai_response TEXT NOT NULL,
+            summary TEXT,
+            importance VARCHAR(20) DEFAULT 'normal',
+            category VARCHAR(50),
+            tags TEXT[],
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_model ON ai_conversations(model_id);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_channel ON ai_conversations(channel);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_importance ON ai_conversations(importance);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_category ON ai_conversations(category);
+        CREATE INDEX IF NOT EXISTS idx_ai_conversations_created ON ai_conversations(created_at DESC);
+        
+        -- AI Knowledge Base table - stores shared knowledge across all models and users
+        CREATE TABLE IF NOT EXISTS ai_knowledge (
+            id SERIAL PRIMARY KEY,
+            key VARCHAR(255) UNIQUE NOT NULL,
+            value TEXT NOT NULL,
+            category VARCHAR(50) DEFAULT 'general',
+            importance VARCHAR(20) DEFAULT 'normal',
+            model_id VARCHAR(100),
+            access_count INTEGER DEFAULT 0,
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_key ON ai_knowledge(key);
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_category ON ai_knowledge(category);
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_importance ON ai_knowledge(importance);
+        
         -- Insert default king user (xtoazt gets king role)
         INSERT INTO users (username, password_hash, role, status) 
         VALUES ('xtoazt', $1, 'king', 'approved')
@@ -1320,6 +1359,134 @@ app.post("/api/ai/action", async (req, res) => {
     res.status(500).json({ error: "Failed to execute AI action" });
   }
 });
+app.post("/api/ai/conversations", async (req, res) => {
+  try {
+    const { model_id, channel, user_message, ai_response, summary, importance, category, tags } = req.body;
+    if (!model_id || !user_message || !ai_response) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const result = await db.query(`INSERT INTO ai_conversations 
+       (model_id, channel, user_message, ai_response, summary, importance, category, tags, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`, [
+      model_id,
+      channel || "global",
+      user_message,
+      ai_response,
+      summary || null,
+      importance || "normal",
+      category || null,
+      tags || [],
+      JSON.stringify({ stored_at: (/* @__PURE__ */ new Date()).toISOString() })
+    ]);
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (error) {
+    console.error("Store conversation error:", error);
+    res.status(500).json({ error: "Failed to store conversation" });
+  }
+});
+app.get("/api/ai/conversations", async (req, res) => {
+  try {
+    const { model_id, channel, importance, category, limit, search } = req.query;
+    let query = "SELECT * FROM ai_conversations WHERE 1=1";
+    const params = [];
+    let paramCount = 1;
+    if (model_id) {
+      query += ` AND model_id = $${paramCount++}`;
+      params.push(model_id);
+    }
+    if (channel) {
+      query += ` AND channel = $${paramCount++}`;
+      params.push(channel);
+    }
+    if (importance) {
+      query += ` AND importance = $${paramCount++}`;
+      params.push(importance);
+    }
+    if (category) {
+      query += ` AND category = $${paramCount++}`;
+      params.push(category);
+    }
+    if (search) {
+      query += ` AND (user_message ILIKE $${paramCount} OR ai_response ILIKE $${paramCount} OR summary ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+      paramCount++;
+    }
+    query += " ORDER BY created_at DESC";
+    const queryLimit = limit ? parseInt(limit) : 20;
+    query += ` LIMIT $${paramCount++}`;
+    params.push(queryLimit);
+    const result = await db.query(query, params);
+    res.json({ conversations: result.rows });
+  } catch (error) {
+    console.error("Get conversations error:", error);
+    res.status(500).json({ error: "Failed to get conversations" });
+  }
+});
+app.post("/api/ai/knowledge", async (req, res) => {
+  try {
+    const { key, value, category, importance, model_id } = req.body;
+    if (!key || !value) {
+      return res.status(400).json({ error: "Missing required fields: key and value" });
+    }
+    const result = await db.query(`INSERT INTO ai_knowledge (key, value, category, importance, model_id, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (key) 
+       DO UPDATE SET 
+         value = EXCLUDED.value,
+         category = EXCLUDED.category,
+         importance = EXCLUDED.importance,
+         access_count = ai_knowledge.access_count + 1,
+         updated_at = CURRENT_TIMESTAMP,
+         metadata = EXCLUDED.metadata
+       RETURNING id, access_count`, [
+      key,
+      value,
+      category || "general",
+      importance || "normal",
+      model_id || null,
+      JSON.stringify({ stored_at: (/* @__PURE__ */ new Date()).toISOString() })
+    ]);
+    res.json({ success: true, id: result.rows[0].id, access_count: result.rows[0].access_count });
+  } catch (error) {
+    console.error("Store knowledge error:", error);
+    res.status(500).json({ error: "Failed to store knowledge" });
+  }
+});
+app.get("/api/ai/knowledge", async (req, res) => {
+  try {
+    const { key, category, importance, limit, search } = req.query;
+    let query = "SELECT * FROM ai_knowledge WHERE 1=1";
+    const params = [];
+    let paramCount = 1;
+    if (key) {
+      query += ` AND key = $${paramCount++}`;
+      params.push(key);
+    }
+    if (category) {
+      query += ` AND category = $${paramCount++}`;
+      params.push(category);
+    }
+    if (importance) {
+      query += ` AND importance = $${paramCount++}`;
+      params.push(importance);
+    }
+    if (search) {
+      query += ` AND (key ILIKE $${paramCount} OR value ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+      paramCount++;
+    }
+    query += " ORDER BY importance DESC, access_count DESC, updated_at DESC";
+    const queryLimit = limit ? parseInt(limit) : 50;
+    query += ` LIMIT $${paramCount++}`;
+    params.push(queryLimit);
+    const result = await db.query(query, params);
+    res.json({ knowledge: result.rows });
+  } catch (error) {
+    console.error("Get knowledge error:", error);
+    res.status(500).json({ error: "Failed to get knowledge" });
+  }
+});
 app.get("/api/ai/context", async (req, res) => {
   try {
     const user = await authenticateRequest(req);
@@ -1417,20 +1584,31 @@ app.options("*", (_req, res) => {
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.sendStatus(200);
 });
+app.use("/assets", express.static(path.join(clientPath, "assets"), {
+  maxAge: "1y",
+  etag: true
+}));
 app.use((req, res, next) => {
   if (req.path.startsWith("/api")) {
     return next();
   }
-  express.static(clientPath, {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return next();
+  }
+  if (req.path.startsWith("/assets")) {
+    return next();
+  }
+  const staticMiddleware = express.static(clientPath, {
     dotfiles: "ignore",
     index: false,
     maxAge: "1y",
     etag: true
-  })(req, res, next);
+  });
+  staticMiddleware(req, res, next);
 });
 app.get("*", (_req, res) => {
   if (_req.path.startsWith("/api")) {
-    return res.status(404).json({ error: "Not found" });
+    return res.status(404).json({ error: "API route not found" });
   }
   if (indexPath) {
     try {

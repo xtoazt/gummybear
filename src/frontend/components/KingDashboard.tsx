@@ -45,19 +45,19 @@ export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }
             </motion.div>
           ) : (
             pendingChanges.map((change, index) => {
-              const actionData = change.action_data || {};
-              const params = actionData.params || {};
-              
-              let detailsContent = '';
-              if (change.change_type === 'modify_code') {
-                detailsContent = `File: ${params.filePath}\n\n${(params.content || '').substring(0, 500)}...`;
-              } else {
-                detailsContent = JSON.stringify(actionData, null, 2);
-              }
+                const actionData = change.action_data || {};
+                const params = actionData.params || {};
+                
+                let detailsContent = '';
+                if (change.change_type === 'modify_code') {
+                  detailsContent = `File: ${params.filePath}\n\n${(params.content || '').substring(0, 500)}...`;
+                } else {
+                  detailsContent = JSON.stringify(actionData, null, 2);
+                }
 
-              return (
+                return (
                 <motion.div
-                  key={change.id}
+                    key={change.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
@@ -110,7 +110,7 @@ export function KingDashboard({ pendingChanges, onApprove, onReject, onRefresh }
                     </div>
                   </div>
                 </motion.div>
-              );
+                );
             })
           )}
         </AnimatePresence>

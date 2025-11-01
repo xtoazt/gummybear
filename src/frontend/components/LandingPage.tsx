@@ -116,7 +116,7 @@ export function LandingPage() {
                   <div className="absolute inset-0 translate-x-[-100%] skew-x-12 bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-[100%] group-hover:duration-1000"></div>
                 </Link>
               </motion.div>
-
+        
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Link
                   to="/demo"

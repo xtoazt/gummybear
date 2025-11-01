@@ -81,8 +81,8 @@ export function Sidebar({ currentChannel, onChannelChange, isKing, pendingCount,
             >
               {pendingCount > 99 ? '99+' : pendingCount}
             </motion.div>
-          )}
-          
+      )}
+
           {/* Tooltip */}
           <div className="absolute left-full ml-2 px-3 py-1.5 bg-base-200 border border-base-300 rounded-lg text-xs font-medium text-base-content opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
             Code Review

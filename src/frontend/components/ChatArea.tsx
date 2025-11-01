@@ -197,7 +197,7 @@ export function ChatArea({
       >
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-base-content">
-            {CHANNEL_NAMES[currentChannel]}
+          {CHANNEL_NAMES[currentChannel]}
           </h2>
           {mentionedMessages.length > 0 && (
             <motion.span
@@ -232,7 +232,7 @@ export function ChatArea({
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 relative bg-base-100">
         <AnimatePresence mode="popLayout">
-          {channelMessages.length === 0 ? (
+            {channelMessages.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -240,16 +240,16 @@ export function ChatArea({
             >
                   <p className="text-base-content/60 text-center">No messages yet. Start the conversation!</p>
             </motion.div>
-          ) : (
+            ) : (
             channelMessages.map((message, index) => {
-              const isOwn = message.sender_id === currentUser.id;
-              const roleColor = ROLE_COLORS[message.role] || '#666';
+                const isOwn = message.sender_id === currentUser.id;
+                const roleColor = ROLE_COLORS[message.role] || '#666';
               const isMentioned = message.content.toLowerCase().includes(`@${currentUser.username.toLowerCase()}`);
               const isEditing = editingMessage === message.id;
-              
-              return (
+                
+                return (
                 <motion.div
-                  key={message.id}
+                    key={message.id}
                   initial={{ opacity: 0, y: 20, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
@@ -257,19 +257,19 @@ export function ChatArea({
                   onMouseEnter={() => setHoveredMessage(message.id)}
                   onMouseLeave={() => setHoveredMessage(null)}
                   className={`flex gap-3 group ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${isMentioned ? 'bg-red-500/10 rounded-lg p-2 -mx-2' : ''}`}
-                  style={{ maxWidth: '70%', marginLeft: isOwn ? 'auto' : '0' }}
-                >
+                    style={{ maxWidth: '70%', marginLeft: isOwn ? 'auto' : '0' }}
+                  >
                   {/* Avatar */}
                   <motion.div
                     whileHover={{ scale: 1.15 }}
                     onClick={() => setShowUserMenu(showUserMenu === message.sender_id ? null : message.sender_id)}
                         className="w-12 h-12 rounded-full flex items-center justify-center text-base-content font-bold text-sm flex-shrink-0 cursor-pointer relative shadow-lg"
-                    style={{ 
+                      style={{
                       background: `linear-gradient(135deg, ${roleColor}, ${roleColor}dd)`,
                       boxShadow: `0 4px 15px ${roleColor}40`
-                    }}
-                  >
-                    {message.username.charAt(0).toUpperCase()}
+                      }}
+                    >
+                      {message.username.charAt(0).toUpperCase()}
                     {onlineUsers.includes(message.username) && (
                       <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-black rounded-full shadow-lg"></div>
                     )}
@@ -292,7 +292,7 @@ export function ChatArea({
                               onChange={(e) => e.target.value && handleRoleChange(message.sender_id, e.target.value)}
                               className="w-full px-2 py-1 bg-base-100 border border-base-300 rounded text-xs text-base-content"
                               defaultValue=""
-                            >
+                    >
                               <option value="">Change Role</option>
                               <option value="admin">Admin</option>
                               <option value="support">Support</option>
@@ -333,13 +333,13 @@ export function ChatArea({
                       <span className="font-bold text-sm text-base-content">{message.username}</span>
                       <span
                         className="px-3 py-1 rounded-full text-xs font-semibold shadow-sm"
-                        style={{
+                          style={{
                           background: `${roleColor}25`,
-                          color: roleColor,
+                            color: roleColor,
                           border: `1px solid ${roleColor}40`
-                        }}
-                      >
-                        {ROLE_NAMES[message.role] || message.role}
+                          }}
+                        >
+                          {ROLE_NAMES[message.role] || message.role}
                       </span>
                           <span className="text-xs text-base-content/60">{formatTime(message.created_at)}</span>
                       {isOwn && hoveredMessage === message.id && (
@@ -453,11 +453,11 @@ export function ChatArea({
                     </div>
                   </motion.div>
                 </motion.div>
-              );
-            })
-          )}
+                );
+              })
+            )}
         </AnimatePresence>
-        <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
@@ -547,12 +547,12 @@ export function ChatArea({
               😊
             </motion.button>
             <motion.button
-              type="submit"
-              disabled={!messageInput.trim() || Date.now() - lastMessageTime < 1500}
+                type="submit"
+                disabled={!messageInput.trim() || Date.now() - lastMessageTime < 1500}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+              >
               <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#ff6b6b_0%,#ee5a52_50%,#ff6b6b_100%)]"></span>
                   <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-content backdrop-blur-3xl">
                 Send

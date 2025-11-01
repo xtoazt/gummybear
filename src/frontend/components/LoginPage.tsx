@@ -80,7 +80,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         setSuccess(result.message || 'Account created successfully!');
         localStorage.setItem('gummybear_token', result.token);
         setTimeout(() => {
-          onLogin(username, password);
+    onLogin(username, password);
         }, 1500);
       } else {
         setError(result.error || 'Registration failed');
@@ -180,17 +180,17 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       transition={{ delay: 0.3 }}
                     >
                       <label htmlFor="login-username" className="block text-sm font-medium text-base-content mb-2">
-                        Username
+                  Username
                       </label>
                       <input
                         id="login-username"
                         type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
                         className="input input-bordered w-full bg-base-100"
                         required
-                      />
+                />
                     </motion.div>
 
                     <motion.div
@@ -199,14 +199,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       transition={{ delay: 0.4 }}
                     >
                       <label htmlFor="login-password" className="block text-sm font-medium text-base-content mb-2">
-                        Password
+                  Password
                       </label>
                       <input
                         id="login-password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
                         className="input input-bordered w-full bg-base-100"
                         required
                       />
@@ -300,7 +300,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       />
                     </motion.div>
 
-                    {error && (
+              {error && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -308,7 +308,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       >
                         <span>{error}</span>
                       </motion.div>
-                    )}
+              )}
 
                     {success && (
                       <motion.div

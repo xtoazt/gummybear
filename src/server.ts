@@ -813,6 +813,7 @@ console.log('CWD:', process.cwd());
 console.log('__dirname:', __dirname);
 console.log('Index path:', indexPath);
 
+// IMPORTANT: Static files and catch-all routes MUST come AFTER all API routes
 // Handle OPTIONS preflight requests for CORS - must be before static files
 app.options('*', (_req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -821,25 +822,41 @@ app.options('*', (_req, res) => {
   res.sendStatus(200);
 });
 
-// Serve static files - but only for non-API routes
+// Serve static files - ONLY for GET requests to non-API paths
+app.use('/assets', express.static(path.join(clientPath, 'assets'), {
+  maxAge: '1y',
+  etag: true
+}));
+
+// Serve other static files (but skip API routes and POST/PUT/DELETE/OPTIONS)
 app.use((req, res, next) => {
-  // Skip static file serving for API routes
+  // ALWAYS skip API routes - do not even try to serve them as static files
   if (req.path.startsWith('/api')) {
-    return next();
+    return next(); // Skip to next middleware/route handler
   }
-  express.static(clientPath, { 
+  // Skip non-GET methods for static files (only GET and HEAD are valid for static files)
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return next(); // Skip to next middleware/route handler
+  }
+  // Skip if it's already an asset (handled above)
+  if (req.path.startsWith('/assets')) {
+    return next(); // Already handled
+  }
+  // Only now try to serve as static file (for GET/HEAD requests to non-API paths)
+  const staticMiddleware = express.static(clientPath, { 
     dotfiles: 'ignore',
     index: false,
     maxAge: '1y',
     etag: true
-  })(req, res, next);
+  });
+  staticMiddleware(req, res, next);
 });
 
-// Serve the main app (React) - this must be after all API routes
+// Serve the main app (React SPA) - ONLY for GET requests to non-API paths
 app.get('*', (_req, res) => {
   // Skip API routes - they should have been handled above
   if (_req.path.startsWith('/api')) {
-    return res.status(404).json({ error: 'Not found' });
+    return res.status(404).json({ error: 'API route not found' });
   }
   
   // Try to serve index.html

@@ -159,10 +159,10 @@ export function DemoPage() {
           <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
             <AnimatePresence mode="popLayout">
               {messages.map((msg, index) => {
-                const role = getRoleConfig(msg.role);
-                return (
+              const role = getRoleConfig(msg.role);
+              return (
                   <motion.div
-                    key={msg.id}
+                  key={msg.id}
                     initial={{ opacity: 0, y: 20, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
@@ -182,7 +182,7 @@ export function DemoPage() {
                       className={`px-4 py-3 rounded-2xl ${
                         msg.isOwn ? 'rounded-tr-sm' : 'rounded-tl-sm'
                       }`}
-                      style={{
+                  style={{
                         background: msg.isOwn 
                           ? `linear-gradient(135deg, ${role.color}, ${role.color}dd)`
                           : 'rgba(26, 26, 26, 0.8)',
@@ -193,36 +193,36 @@ export function DemoPage() {
                         <span className="font-bold text-sm text-white">{msg.username}</span>
                         <span
                           className="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{
+                    style={{
                             background: `${role.color}20`,
                             color: role.color
                           }}
                         >
-                          {role.name}
+                        {role.name}
                         </span>
                         <span className="text-xs text-gray-500">{msg.time}</span>
                       </div>
                       <p className="text-sm text-white/90 break-words">{msg.content}</p>
                     </motion.div>
                   </motion.div>
-                );
-              })}
+              );
+            })}
             </AnimatePresence>
           </div>
 
           <div className="p-4 bg-black/50 backdrop-blur-sm border-t border-white/10">
             <form onSubmit={handleSend} className="flex gap-3">
               <textarea
-                value={messageInput}
+                  value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
-                placeholder="Type your message..."
+                  placeholder="Type your message..."
                 maxLength={2000}
-                rows={1}
+                  rows={1}
                 className="flex-1 px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all resize-none"
                 style={{ minHeight: '44px', maxHeight: '120px' }}
-              />
+                />
               <motion.button
-                type="submit"
+                  type="submit"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black"

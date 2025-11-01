@@ -102,42 +102,42 @@ export function ConfigDownloadPage({ onConfigComplete }: ConfigDownloadPageProps
               </h1>
               
               <p className="text-lg text-gray-400 text-center mb-8">
-                To access the vulnerability tester, you must first run the system scanner.
+            To access the vulnerability tester, you must first run the system scanner.
               </p>
-              
+          
               <div className="mb-8 p-4 bg-black/50 border border-white/10 rounded-lg">
                 <h3 className="text-lg font-bold mb-2 text-white">Choose an option:</h3>
                 <p className="text-sm text-gray-400">
-                  You can either run the scanner directly in your browser (recommended) or download a standalone scanner file.
+              You can either run the scanner directly in your browser (recommended) or download a standalone scanner file.
                 </p>
               </div>
 
               <div className="space-y-3">
                 <motion.button
-                  onClick={() => setShowScanner(true)}
+              onClick={() => setShowScanner(true)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="relative w-full inline-flex h-14 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
-                >
+            >
                   <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#007BFF_0%,#0056b3_50%,#007BFF_100%)]"></span>
                   <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-black px-6 py-3 text-base font-semibold text-white backdrop-blur-3xl">
-                    🔍 Run Scanner Now
+              🔍 Run Scanner Now
                   </span>
                 </motion.button>
-                
+            
                 <motion.button
-                  onClick={() => navigate('/scanner')}
+              onClick={() => navigate('/scanner')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full px-6 py-3 bg-black/50 border border-white/20 rounded-full text-white font-semibold hover:border-white/40 transition-all"
-                >
-                  🌐 Open Scanner Page
+            >
+              🌐 Open Scanner Page
                 </motion.button>
               </div>
 
               <p className="text-sm text-gray-500 text-center mt-6">
-                This scanner will analyze your ChromeOS system to identify potential vulnerabilities,
-                including unenrollment exploits, webview vulnerabilities, and other security issues.
+            This scanner will analyze your ChromeOS system to identify potential vulnerabilities,
+            including unenrollment exploits, webview vulnerabilities, and other security issues.
               </p>
             </div>
           </motion.div>

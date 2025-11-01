@@ -56,7 +56,7 @@ export default {
       },
     },
   },
-  plugins: [require('daisyui')],
+  // DaisyUI plugin is loaded via @plugin "daisyui" in CSS (Tailwind v4)
   daisyui: {
     themes: [
       {

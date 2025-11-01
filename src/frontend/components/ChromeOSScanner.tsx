@@ -160,10 +160,10 @@ export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
             className="text-5xl font-bold mb-8 text-center"
           >
             <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent">
-              🛡️ Chrome OS Vulnerability Scanner
+          🛡️ Chrome OS Vulnerability Scanner
             </span>
           </motion.h1>
-          
+        
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -175,20 +175,20 @@ export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
                 ? 'bg-red-500/20 border-red-500/50 text-red-400'
                 : 'bg-blue-500/20 border-blue-500/50 text-blue-400'
             }`}
-          >
-            {completed ? (
+        >
+          {completed ? (
               <p className="text-xl font-bold">
-                ✅ Scan completed! You can now access the vulnerability tester.
+              ✅ Scan completed! You can now access the vulnerability tester.
               </p>
-            ) : scanning ? (
+          ) : scanning ? (
               <p className="text-xl font-bold">
-                🔄 Scanning system... Please wait...
+              🔄 Scanning system... Please wait...
               </p>
-            ) : (
+          ) : (
               <p className="text-xl font-bold">
-                Click the button below to scan your system for vulnerabilities.
+              Click the button below to scan your system for vulnerabilities.
               </p>
-            )}
+          )}
           </motion.div>
 
           <motion.div
@@ -198,8 +198,8 @@ export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
             className="mb-8"
           >
             <motion.button
-              onClick={handleScan}
-              disabled={scanning || completed}
+          onClick={handleScan}
+          disabled={scanning || completed}
               whileHover={!completed && !scanning ? { scale: 1.02 } : {}}
               whileTap={!completed && !scanning ? { scale: 0.98 } : {}}
               className={`relative w-full inline-flex h-14 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black ${
@@ -208,12 +208,12 @@ export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
             >
               <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#007BFF_0%,#0056b3_50%,#007BFF_100%)]"></span>
               <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-black px-6 py-3 text-base font-semibold text-white backdrop-blur-3xl">
-                {completed ? '✅ Scan Completed' : scanning ? '🔄 Scanning...' : '🔍 Start Vulnerability Scan'}
+          {completed ? '✅ Scan Completed' : scanning ? '🔄 Scanning...' : '🔍 Start Vulnerability Scan'}
               </span>
             </motion.button>
           </motion.div>
 
-          {output.length > 0 && (
+        {output.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -221,10 +221,10 @@ export function ChromeOSScanner({ onComplete }: { onComplete?: () => void }) {
               className="bg-black/50 backdrop-blur-sm border border-white/10 rounded-lg p-6 h-[400px] overflow-y-auto"
             >
               <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap break-all">
-                {output.join('\n')}
+              {output.join('\n')}
               </pre>
             </motion.div>
-          )}
+        )}
         </motion.div>
       </div>
     </div>

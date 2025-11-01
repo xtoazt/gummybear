@@ -3,6 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { ContainerTextFlip } from './ui/container-text-flip';
+import { MagicCard } from './ui/magic-card';
+import { BorderBeam } from './ui/border-beam';
+import { ShimmerButton } from './ui/shimmer-button';
+import { NumberTicker } from './ui/number-ticker';
+import { AnimatedGradientText } from './ui/animated-gradient-text';
+import { GridPattern } from './ui/grid-pattern';
+import { ScrollProgress } from './ui/scroll-progress';
 import '../styles/showcase.css';
 
 // Feature Tabs Component using DaisyUI tabs
@@ -61,35 +68,37 @@ const FeatureTabs = () => {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
         >
-          <div className="card bg-base-200 shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title text-2xl">{content[activeTab].title}</h2>
-              <p className="text-base-content/70 mb-4">{content[activeTab].description}</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {content[activeTab].features.map((feature, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-base-content">{feature}</span>
-                  </div>
-                ))}
+          <MagicCard className="rounded-lg">
+            <div className="card bg-base-200 shadow-xl border border-base-300">
+              <div className="card-body">
+                <h2 className="card-title text-2xl">{content[activeTab].title}</h2>
+                <p className="text-base-content/70 mb-4">{content[activeTab].description}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {content[activeTab].features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-base-content">{feature}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </MagicCard>
         </motion.div>
       </AnimatePresence>
     </div>
   );
 };
 
-// Stats Component using DaisyUI stats
+// Stats Component using DaisyUI stats with NumberTicker
 const Stats = () => {
   const stats = [
-    { value: '50+', label: 'Components' },
-    { value: '100%', label: 'Customizable' },
-    { value: 'Fast', label: 'Performance' },
-    { value: '24/7', label: 'Support' }
+    { value: 50, label: 'Components', suffix: '+' },
+    { value: 100, label: 'Customizable', suffix: '%' },
+    { value: 2, label: 'Faster Build', suffix: 'x' },
+    { value: 24, label: 'Support', suffix: '/7' }
   ];
 
   return (
@@ -103,7 +112,10 @@ const Stats = () => {
           transition={{ delay: idx * 0.1 }}
           className="stat"
         >
-          <div className="stat-value text-3xl font-bold">{stat.value}</div>
+          <div className="stat-value text-3xl font-bold">
+            <NumberTicker value={stat.value} delay={idx * 0.2} />
+            {stat.suffix}
+          </div>
           <div className="stat-title text-base-content/70">{stat.label}</div>
         </motion.div>
       ))}
@@ -111,35 +123,41 @@ const Stats = () => {
   );
 };
 
-// Component Card using DaisyUI card
+// Component Card using MagicCard
 const ComponentCard = ({ title, desc, delay }: { title: string; desc: string; delay: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ delay }}
-    whileHover={{ y: -4 }}
-    className="card bg-base-200 shadow-xl hover:shadow-2xl transition-shadow"
+    className="relative"
   >
-    <div className="card-body">
-      <h3 className="card-title text-xl">{title}</h3>
-      <p className="text-base-content/70">{desc}</p>
-    </div>
+    <MagicCard className="rounded-lg">
+      <div className="card bg-base-200 shadow-xl hover:shadow-2xl transition-shadow border border-base-300">
+        <div className="card-body">
+          <h3 className="card-title text-xl">{title}</h3>
+          <p className="text-base-content/70">{desc}</p>
+        </div>
+      </div>
+    </MagicCard>
   </motion.div>
 );
 
-// Pricing Card using DaisyUI card
+// Pricing Card with BorderBeam for featured
 const PricingCard = ({ name, price, features, featured = false }: { name: string; price: string; features: string[]; featured?: boolean }) => (
   <motion.div
     initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
-    className={`card ${featured ? 'ring-2 ring-primary' : ''} bg-base-200 shadow-xl`}
+    className={`relative card ${featured ? 'ring-2 ring-primary' : ''} bg-base-200 shadow-xl`}
   >
-    <div className="card-body">
+    {featured && <BorderBeam size={100} duration={8} />}
+    <div className="card-body relative">
       <h2 className="card-title text-2xl">{name}</h2>
       <div className="flex items-baseline gap-2 mb-4">
-        <span className="text-4xl font-bold">{price}</span>
+        <AnimatedGradientText className="text-4xl font-bold">
+          {price}
+        </AnimatedGradientText>
         {price !== 'Free' && price !== 'Custom' && <span className="text-base-content/70 text-sm">/month</span>}
       </div>
       <ul className="space-y-2 mb-6">
@@ -152,17 +170,20 @@ const PricingCard = ({ name, price, features, featured = false }: { name: string
           </li>
         ))}
       </ul>
-      <button className={`btn ${featured ? 'btn-primary' : 'btn-outline'} w-full`}>
+      <ShimmerButton className={`w-full ${featured ? '' : 'btn-outline'}`}>
         Get Started
-      </button>
+      </ShimmerButton>
     </div>
   </motion.div>
 );
 
 export function UIShowcase() {
   return (
-    <div className="min-h-screen bg-base-100">
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
+    <div className="min-h-screen bg-base-100 relative overflow-hidden">
+      <ScrollProgress />
+      <GridPattern className="opacity-40" />
+      
+      <div className="container mx-auto px-4 py-12 max-w-6xl relative z-10">
         {/* Header */}
         <div className="flex justify-between items-start mb-12">
           <Link to="/app" className="btn btn-ghost btn-sm">
@@ -178,12 +199,14 @@ export function UIShowcase() {
         >
           <h1 className="text-5xl md:text-6xl font-bold mb-4">
             <ContainerTextFlip
-              words={["DaisyUI", "Aceternity", "Components", "Showcase"]}
+              words={["DaisyUI", "Aceternity", "MagicUI", "Showcase"]}
               interval={3000}
             />
           </h1>
           <p className="text-xl text-base-content/70 max-w-2xl mx-auto">
-            Beautiful components built with DaisyUI and Aceternity UI animations
+            <AnimatedGradientText>
+              Beautiful components built with DaisyUI, Aceternity UI, and MagicUI animations
+            </AnimatedGradientText>
           </p>
         </motion.div>
 
@@ -194,7 +217,9 @@ export function UIShowcase() {
           viewport={{ once: true }}
           className="mb-16"
         >
-          <h2 className="text-3xl font-bold mb-8 text-center">Interactive Features</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">
+            <AnimatedGradientText>Interactive Features</AnimatedGradientText>
+          </h2>
           <FeatureTabs />
         </motion.section>
 
@@ -215,36 +240,38 @@ export function UIShowcase() {
           viewport={{ once: true }}
           className="mb-16"
         >
-          <h2 className="text-3xl font-bold mb-8 text-center">Component Gallery</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">
+            <AnimatedGradientText>Component Gallery</AnimatedGradientText>
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ComponentCard
-              title="Animated Cards"
-              desc="Smooth card animations with hover effects"
+              title="Magic Cards"
+              desc="Interactive cards with spotlight hover effects"
               delay={0}
             />
             <ComponentCard
-              title="Form Components"
-              desc="Accessible form inputs and validation"
+              title="Animated Buttons"
+              desc="Shimmer and gradient button animations"
               delay={0.1}
             />
             <ComponentCard
-              title="Button States"
-              desc="Multiple button variants and sizes"
+              title="Text Effects"
+              desc="Gradient text and flip animations"
               delay={0.2}
             />
             <ComponentCard
-              title="Text Animations"
-              desc="Text flip and fade animations"
+              title="Number Animations"
+              desc="Smooth counting number tickers"
               delay={0.3}
             />
             <ComponentCard
-              title="Navigation"
-              desc="Clean navigation components"
+              title="Border Effects"
+              desc="Animated beams along borders"
               delay={0.4}
             />
             <ComponentCard
-              title="Layouts"
-              desc="Responsive grid and flex layouts"
+              title="Grid Patterns"
+              desc="Animated background patterns"
               delay={0.5}
             />
           </div>
@@ -257,7 +284,9 @@ export function UIShowcase() {
           viewport={{ once: true }}
           className="mb-16"
         >
-          <h2 className="text-3xl font-bold mb-8 text-center">Pricing</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">
+            <AnimatedGradientText>Pricing</AnimatedGradientText>
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <PricingCard
               name="Starter"
@@ -285,26 +314,30 @@ export function UIShowcase() {
           viewport={{ once: true }}
           className="text-center"
         >
-          <div className="card bg-base-200 shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title text-3xl justify-center mb-4">
-                Ready to Build Something Amazing?
-              </h2>
-              <p className="text-base-content/70 mb-6 max-w-xl mx-auto">
-                Combine the power of DaisyUI and Aceternity UI to create stunning interfaces
-              </p>
-              <div className="flex gap-4 justify-center">
-                <Link to="/app">
-                  <button className="btn btn-primary btn-lg">
-                    Launch Chat App
-                  </button>
-                </Link>
-                <a href="https://daisyui.com" target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-lg">
-                  View DaisyUI Docs
-                </a>
+          <MagicCard className="rounded-lg">
+            <div className="card bg-base-200 shadow-xl border border-base-300">
+              <div className="card-body">
+                <h2 className="card-title text-3xl justify-center mb-4">
+                  <AnimatedGradientText>Ready to Build Something Amazing?</AnimatedGradientText>
+                </h2>
+                <p className="text-base-content/70 mb-6 max-w-xl mx-auto">
+                  Combine the power of DaisyUI, Aceternity UI, and MagicUI to create stunning interfaces
+                </p>
+                <div className="flex gap-4 justify-center flex-wrap">
+                  <Link to="/app">
+                    <ShimmerButton>
+                      Launch Chat App
+                    </ShimmerButton>
+                  </Link>
+                  <a href="https://daisyui.com" target="_blank" rel="noopener noreferrer">
+                    <ShimmerButton>
+                      View DaisyUI Docs
+                    </ShimmerButton>
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
+          </MagicCard>
         </motion.section>
       </div>
     </div>

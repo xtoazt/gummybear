@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTheme } from '../hooks/useTheme';
 
 const DAISYUI_THEMES = [
   "monochrome",
@@ -38,26 +39,11 @@ const DAISYUI_THEMES = [
 ] as const;
 
 export function ThemeSwitcher() {
-  const [currentTheme, setCurrentTheme] = useState<string>('monochrome');
+  const { currentTheme, changeTheme: changeThemeHook } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    // Set default theme to monochrome
-    document.documentElement.setAttribute('data-theme', 'monochrome');
-    setCurrentTheme('monochrome');
-    
-    // Load saved theme from localStorage
-    const savedTheme = localStorage.getItem('daisyui-theme');
-    if (savedTheme && DAISYUI_THEMES.includes(savedTheme as any)) {
-      setCurrentTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    }
-  }, []);
-
   const changeTheme = (theme: string) => {
-    document.documentElement.setAttribute('data-theme', theme);
-    setCurrentTheme(theme);
-    localStorage.setItem('daisyui-theme', theme);
+    changeThemeHook(theme);
     setIsOpen(false);
   };
 

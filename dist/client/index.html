@@ -4,10 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>🍭 GummyBear - AI-Powered Chat Platform</title>
-    <link rel="stylesheet" crossorigin href="/assets/index-a34kbIEW.css">
+        <script>
+          // Apply theme immediately before page render to prevent flash
+          (function() {
+            try {
+              const savedTheme = localStorage.getItem('daisyui-theme');
+              const defaultTheme = 'monochrome';
+              const themeToApply = savedTheme || defaultTheme;
+              document.documentElement.setAttribute('data-theme', themeToApply);
+              if (!savedTheme) {
+                localStorage.setItem('daisyui-theme', defaultTheme);
+              }
+            } catch (e) {
+              // Fallback if localStorage is not available
+              document.documentElement.setAttribute('data-theme', 'monochrome');
+            }
+          })();
+        </script>
+    <link rel="stylesheet" crossorigin href="/assets/index-I1gXVk7R.css">
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" crossorigin src="/assets/index-D1GGYROb.js"></script>
+    <script type="module" crossorigin src="/assets/index-WMdY3ab8.js"></script>
   </body>
 </html>

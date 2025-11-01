@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useWebRTC } from './hooks/useWebRTC';
+import { useTheme } from './hooks/useTheme';
 import { LoginPage } from './components/LoginPage';
 import { ChatApp } from './components/ChatApp';
 import { ConfigDownloadPage } from './components/ConfigDownloadPage';
@@ -72,14 +73,8 @@ function AppRoutes() {
 }
 
 function App() {
-  useEffect(() => {
-    // Set default monochrome theme on mount
-    document.documentElement.setAttribute('data-theme', 'monochrome');
-    const savedTheme = localStorage.getItem('daisyui-theme');
-    if (savedTheme) {
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    }
-  }, []);
+  // Initialize theme hook - this ensures theme is set before render
+  useTheme();
 
   return (
     <div className="min-h-screen bg-base-100">

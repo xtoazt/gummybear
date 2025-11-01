@@ -40,6 +40,24 @@ class HTMLGenerator {
   private static buildHTMLString(config: HTMLStructure): string {
     const { meta, rootId, scriptPath } = config;
     
+    const themeScript = `        <script>
+          // Apply theme immediately before page render to prevent flash
+          (function() {
+            try {
+              const savedTheme = localStorage.getItem('daisyui-theme');
+              const defaultTheme = 'monochrome';
+              const themeToApply = savedTheme || defaultTheme;
+              document.documentElement.setAttribute('data-theme', themeToApply);
+              if (!savedTheme) {
+                localStorage.setItem('daisyui-theme', defaultTheme);
+              }
+            } catch (e) {
+              // Fallback if localStorage is not available
+              document.documentElement.setAttribute('data-theme', 'monochrome');
+            }
+          })();
+        </script>`;
+    
     const parts: string[] = [
       '<!DOCTYPE html>',
       `<html lang="${meta.lang}">`,
@@ -47,6 +65,7 @@ class HTMLGenerator {
       `    <meta charset="${meta.charset}" />`,
       `    <meta name="viewport" content="${meta.viewport}" />`,
       `    <title>${meta.title}</title>`,
+      themeScript,
       '  </head>',
       '  <body>',
       `    <div id="${rootId}"></div>`,
@@ -68,13 +87,32 @@ class HTMLGenerator {
       scriptPath: structure.scriptPath || '/main.tsx'
     };
 
+    const themeScript = `        <script>
+          // Apply theme immediately before page render to prevent flash
+          (function() {
+            try {
+              const savedTheme = localStorage.getItem('daisyui-theme');
+              const defaultTheme = 'monochrome';
+              const themeToApply = savedTheme || defaultTheme;
+              document.documentElement.setAttribute('data-theme', themeToApply);
+              if (!savedTheme) {
+                localStorage.setItem('daisyui-theme', defaultTheme);
+              }
+            } catch (e) {
+              // Fallback if localStorage is not available
+              document.documentElement.setAttribute('data-theme', 'monochrome');
+            }
+          })();
+        </script>`;
+
     const parts: string[] = [
       '<!DOCTYPE html>',
       `<html lang="${config.meta.lang}">`,
       '  <head>',
       `    <meta charset="${config.meta.charset}" />`,
       `    <meta name="viewport" content="${config.meta.viewport}" />`,
-      `    <title>${config.meta.title}</title>`
+      `    <title>${config.meta.title}</title>`,
+      themeScript
     ];
 
     // Add CSS links

@@ -13,3 +13,7 @@ demo.html
 index.html
 composer.json
 composer.lock
+src/server.ts
+src/lib/
+tsconfig.server.json
+*.bundle.js

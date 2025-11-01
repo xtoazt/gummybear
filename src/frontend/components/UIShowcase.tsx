@@ -38,23 +38,33 @@ const FeatureTabs = () => {
 
   return (
     <div className="w-full">
-      <div className="flex gap-2 mb-6 border-b border-white/10">
+      <div className="flex gap-2 mb-8 border-b-2 border-purple-500/20 pb-2">
         {tabs.map((tab) => (
           <motion.button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 font-semibold transition-all relative ${
-              activeTab === tab.id ? 'text-white' : 'text-gray-500'
+            className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all relative rounded-t-lg ${
+              activeTab === tab.id 
+                ? 'text-white' 
+                : 'text-gray-400 hover:text-gray-200'
             }`}
-            whileHover={{ y: -2 }}
+            whileHover={{ y: -2, scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            {tab.icon} {tab.label}
+            <span className="text-lg mr-2">{tab.icon}</span>
+            {tab.label}
             {activeTab === tab.id && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-pink-500 to-red-500"
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
+              <>
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 rounded-t-full"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+                <motion.div
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 blur-sm opacity-50"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              </>
             )}
           </motion.button>
         ))}
@@ -70,11 +80,11 @@ const FeatureTabs = () => {
           className="relative group"
         >
           <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-          <div className="relative bg-black/70 border border-white/20 rounded-xl p-8 shadow-xl" style={{ backdropFilter: 'blur(12px)' }}>
-            <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+          <div className="relative bg-gradient-to-br from-black/80 via-purple-900/20 to-pink-900/20 border-2 border-purple-500/30 rounded-xl p-8 shadow-2xl" style={{ backdropFilter: 'blur(16px)' }}>
+            <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-pink-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
               {content[activeTab].title}
             </h3>
-            <p className="text-gray-400 mb-6">{content[activeTab].description}</p>
+            <p className="text-gray-300 mb-6 font-medium">{content[activeTab].description}</p>
             <div className="grid grid-cols-2 gap-4">
               {content[activeTab].features.map((feature, idx) => (
                 <motion.div
@@ -82,10 +92,15 @@ const FeatureTabs = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  className="flex items-center gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.05, x: 4 }}
+                  className="flex items-center gap-3 p-4 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-lg hover:border-pink-500/40 hover:from-pink-500/20 hover:to-purple-500/20 transition-all cursor-pointer"
                 >
-                  <div className="w-2 h-2 rounded-full bg-gradient-to-r from-pink-500 to-red-500"></div>
-                  <span className="text-gray-300">{feature}</span>
+                  <motion.div 
+                    className="w-3 h-3 rounded-full bg-gradient-to-r from-pink-500 to-red-500 shadow-lg shadow-pink-500/50"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
+                  ></motion.div>
+                  <span className="text-white font-medium">{feature}</span>
                 </motion.div>
               ))}
             </div>
@@ -107,13 +122,15 @@ const PricingCard = ({ name, price, features, highlighted = false }: { name: str
     {highlighted && (
       <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-50"></div>
     )}
-    <div className={`relative bg-black/70 border rounded-2xl p-8 h-full shadow-lg ${
-      highlighted ? 'border-pink-500/50' : 'border-white/20'
-    }`} style={{ backdropFilter: 'blur(12px)' }}>
+    <div className={`relative bg-gradient-to-br from-black/80 via-purple-900/20 to-pink-900/20 border-2 rounded-2xl p-8 h-full shadow-2xl ${
+      highlighted ? 'border-pink-500/50 shadow-pink-500/30' : 'border-purple-500/30'
+    }`} style={{ backdropFilter: 'blur(16px)' }}>
       <div className="mb-6">
-        <h3 className="text-xl font-bold mb-2 text-white">{name}</h3>
+        <h3 className="text-xl font-bold mb-3 bg-gradient-to-r from-white via-pink-200 to-purple-200 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          {name}
+        </h3>
         <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-red-500 bg-clip-text text-transparent">
+          <span className="text-5xl font-bold bg-gradient-to-r from-pink-400 via-red-400 to-orange-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {price}
           </span>
         </div>
@@ -127,8 +144,14 @@ const PricingCard = ({ name, price, features, highlighted = false }: { name: str
             transition={{ delay: idx * 0.1 }}
             className="flex items-center gap-2 text-sm text-gray-300"
           >
-            <span className="text-green-400">✓</span>
-            {feature}
+            <motion.span 
+              className="text-2xl"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 0.5, delay: idx * 0.1 }}
+            >
+              ✓
+            </motion.span>
+            <span className="text-white font-medium">{feature}</span>
           </motion.li>
         ))}
       </ul>
@@ -165,14 +188,14 @@ const Stats = () => {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.1 }}
           whileHover={{ scale: 1.05 }}
-          className="text-center p-6 bg-black/70 border border-white/20 rounded-xl shadow-lg hover:border-white/30 transition-colors"
-          style={{ backdropFilter: 'blur(12px)' }}
+          className="text-center p-8 bg-gradient-to-br from-black/80 via-purple-900/20 to-pink-900/20 border-2 border-purple-500/30 rounded-xl shadow-2xl hover:border-pink-500/50 hover:shadow-pink-500/20 transition-all"
+          style={{ backdropFilter: 'blur(16px)' }}
         >
-          <div className="text-4xl mb-2">{stat.icon}</div>
-          <div className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-red-500 bg-clip-text text-transparent mb-1">
+          <div className="text-5xl mb-3 filter drop-shadow-lg">{stat.icon}</div>
+          <div className="text-4xl font-bold bg-gradient-to-r from-pink-400 via-red-400 to-orange-400 bg-clip-text text-transparent mb-2" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {stat.value}
           </div>
-          <div className="text-sm text-gray-400">{stat.label}</div>
+          <div className="text-sm text-gray-300 font-semibold uppercase tracking-wider">{stat.label}</div>
         </motion.div>
       ))}
     </div>
@@ -194,18 +217,47 @@ export function UIShowcase() {
 
   return (
     <div className="min-h-screen w-full bg-black relative overflow-x-hidden">
-      {/* Background Effects */}
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/30 via-black to-pink-900/30 pointer-events-none"></div>
+      {/* Animated Gradient Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-black pointer-events-none"></div>
+      <div className="fixed inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
       
+      {/* Spotlight Effect */}
       <motion.div
         className="fixed inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255, 107, 107, 0.15), transparent 40%)`
+          background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255, 107, 107, 0.25), rgba(168, 85, 247, 0.15), transparent 50%)`
         }}
         transition={{ type: "spring", stiffness: 50, damping: 50 }}
       />
 
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+      {/* Grid Pattern */}
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+      
+      {/* Animated Orbs */}
+      <motion.div
+        className="fixed top-20 left-20 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl pointer-events-none"
+        animate={{
+          x: [0, 100, 0],
+          y: [0, 50, 0],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div
+        className="fixed bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"
+        animate={{
+          x: [0, -100, 0],
+          y: [0, -50, 0],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10">
@@ -229,12 +281,23 @@ export function UIShowcase() {
             animate={{ scale: 1, opacity: 1 }}
             className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-6"
           >
-            <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent block">
+            <motion.span
+              animate={{
+                backgroundPosition: ["0%", "100%", "0%"]
+              }}
+              transition={{
+                duration: 5,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+              className="bg-gradient-to-r from-pink-500 via-red-500 via-orange-500 to-pink-500 bg-clip-text text-transparent block bg-[length:200%_auto]"
+              style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+            >
               🍭 GummyBear
-            </span>
+            </motion.span>
           </motion.h1>
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto px-4">
-            Experience the perfect blend of Aceternity UI animations and Magic UI Pro components
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto px-4 font-medium">
+            Experience the perfect blend of <span className="text-pink-400">Aceternity UI</span> animations and <span className="text-purple-400">Magic UI Pro</span> components
           </p>
         </motion.div>
 
@@ -245,8 +308,10 @@ export function UIShowcase() {
           viewport={{ once: true }}
           className="mb-20"
         >
-          <h2 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Interactive Features
+          <h2 className="text-4xl font-bold mb-10 text-center">
+            <span className="bg-gradient-to-r from-pink-400 via-red-400 to-orange-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Interactive Features
+            </span>
           </h2>
           <FeatureTabs />
         </motion.section>
@@ -259,8 +324,8 @@ export function UIShowcase() {
           className="mb-20"
         >
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-            <div className="relative bg-black/70 border border-white/20 rounded-2xl p-8 shadow-xl" style={{ backdropFilter: 'blur(12px)' }}>
+            <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 via-purple-600 to-pink-600 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition duration-1000"></div>
+            <div className="relative bg-gradient-to-br from-black/80 via-purple-900/20 to-pink-900/20 border-2 border-purple-500/30 rounded-2xl p-8 shadow-2xl" style={{ backdropFilter: 'blur(16px)' }}>
               <Stats />
             </div>
           </div>
@@ -273,8 +338,10 @@ export function UIShowcase() {
           viewport={{ once: true }}
           className="mb-20"
         >
-          <h2 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Component Gallery
+          <h2 className="text-4xl font-bold mb-10 text-center">
+            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-red-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Component Gallery
+            </span>
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
             {[
@@ -295,10 +362,12 @@ export function UIShowcase() {
                 className="relative group"
               >
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-0 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative bg-black/70 border border-white/20 rounded-lg p-6 h-full shadow-lg" style={{ backdropFilter: 'blur(12px)' }}>
-                  <div className="text-4xl mb-3">{item.icon}</div>
-                  <h3 className="text-xl font-bold mb-2 text-white">{item.title}</h3>
-                  <p className="text-gray-400 text-sm">{item.desc}</p>
+                <div className="relative bg-gradient-to-br from-black/80 via-purple-900/20 to-pink-900/20 border-2 border-purple-500/30 rounded-xl p-6 h-full shadow-xl hover:shadow-pink-500/20 hover:border-pink-500/50 transition-all" style={{ backdropFilter: 'blur(16px)' }}>
+                  <div className="text-5xl mb-4 filter drop-shadow-lg">{item.icon}</div>
+                  <h3 className="text-xl font-bold mb-3 bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-300 text-sm font-medium">{item.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -312,8 +381,10 @@ export function UIShowcase() {
           viewport={{ once: true }}
           className="mb-20"
         >
-          <h2 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Simple Pricing
+          <h2 className="text-4xl font-bold mb-10 text-center">
+            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-orange-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Simple Pricing
+            </span>
           </h2>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <PricingCard
@@ -344,9 +415,11 @@ export function UIShowcase() {
         >
           <div className="relative group max-w-4xl mx-auto">
             <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-            <div className="relative bg-black/70 border border-white/20 rounded-2xl p-12 shadow-2xl" style={{ backdropFilter: 'blur(12px)' }}>
-              <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                Ready to Build Something Amazing?
+            <div className="relative bg-gradient-to-br from-black/80 via-purple-900/20 to-pink-900/20 border-2 border-purple-500/30 rounded-2xl p-12 shadow-2xl" style={{ backdropFilter: 'blur(16px)' }}>
+              <h2 className="text-4xl font-bold mb-4">
+                <span className="bg-gradient-to-r from-pink-400 via-red-400 to-orange-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  Ready to Build Something Amazing?
+                </span>
               </h2>
               <p className="text-gray-400 mb-8 text-lg">
                 Combine the power of Aceternity UI and Magic UI Pro to create stunning interfaces
